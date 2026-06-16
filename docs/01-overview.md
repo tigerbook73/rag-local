@@ -7,6 +7,7 @@
 基于 RAG（检索增强生成）的本地 FAQ 问答系统。支持导入文档作为知识库，通过自然语言提问获取答案，并内置质量评估能力。
 
 **核心约束：**
+
 - **单用户**：无注册/登录/权限管理
 - **本地部署**：全部服务本地运行，不依赖任何云服务
 - **数据可控**：不引入 LangChain / LlamaIndex，各步骤使用专项库自实现，保持完整数据可控性
@@ -15,20 +16,21 @@
 
 ## 1.2 技术栈
 
-| 层级 | 选型 | 选型原因 |
-|------|------|---------|
-| Frontend | React + React Router | 生态成熟，与 Vite 配合开发体验好 |
-| Backend | NestJS | 模块化架构适合拆分 documents/messages/settings 等模块；内置 DI、Pipe、Guard；TypeScript 一等公民 |
-| 异步队列 | BullMQ + Redis | Embedding 是 CPU 密集型操作，必须异步处理；BullMQ 支持 job 持久化、重试、并发控制 |
-| 数据库 | Supabase Local（PostgreSQL + pgvector） | pgvector 原生向量检索；Supabase Local 提供 Storage；本地运行无需上云 |
-| 文件存储 | Supabase Storage | 与 DB 同一套 Supabase Local 实例，运维简单 |
-| Embedding | BGE-M3 via `@huggingface/transformers`（ONNX） | 多语言（中英混合支持好）；ONNX 本地推理，无需 GPU；1024 维输出 |
-| Re-ranking | Cross-encoder via `@huggingface/transformers`（ONNX，可选） | 检索后精排，提升 Top-K 质量；按需开启 |
-| LLM | OpenAI SDK（兼容 DeepSeek / OpenAI） | OpenAI SDK 支持 baseURL 替换，切换 provider 只需改配置 |
-| ORM | Prisma | 类型安全；schema 即迁移文件；与 NestJS 集成成熟 |
-| 状态管理 | Zustand | 轻量，适合单用户本地应用 |
-| 部署 | Docker Compose + Supabase Local | 一条命令启动全部服务 |
-| Monorepo | Turborepo + pnpm workspace | 统一管理 web/api/worker 三个应用和共享 packages |
+| 层级       | 选型                                                        | 选型原因                                                                                         |
+| ---------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Frontend   | React + React Router                                        | 生态成熟，与 Vite 配合开发体验好                                                                 |
+| Backend    | NestJS                                                      | 模块化架构适合拆分 documents/messages/settings 等模块；内置 DI、Pipe、Guard；TypeScript 一等公民 |
+| 异步队列   | BullMQ + Redis                                              | Embedding 是 CPU 密集型操作，必须异步处理；BullMQ 支持 job 持久化、重试、并发控制                |
+| 数据库     | Supabase Local（PostgreSQL + pgvector）                     | pgvector 原生向量检索；Supabase Local 提供 Storage；本地运行无需上云                             |
+| 文件存储   | Supabase Storage                                            | 与 DB 同一套 Supabase Local 实例，运维简单                                                       |
+| Embedding  | BGE-M3 via `@huggingface/transformers`（ONNX）              | 多语言（中英混合支持好）；ONNX 本地推理，无需 GPU；1024 维输出                                   |
+| Re-ranking | Cross-encoder via `@huggingface/transformers`（ONNX，可选） | 检索后精排，提升 Top-K 质量；按需开启                                                            |
+| LLM        | OpenAI SDK（兼容 DeepSeek / OpenAI）                        | OpenAI SDK 支持 baseURL 替换，切换 provider 只需改配置                                           |
+| ORM        | Prisma                                                      | 类型安全；schema 即迁移文件；与 NestJS 集成成熟                                                  |
+| UI 样式    | Tailwind CSS + shadcn/ui                                    | 无运行时、组件可复制到项目、与 Vite 配合好                                                       |
+| 状态管理   | Zustand                                                     | 轻量，适合单用户本地应用                                                                         |
+| 部署       | Docker Compose + Supabase Local                             | 一条命令启动全部服务                                                                             |
+| Monorepo   | Turborepo + pnpm workspace                                  | 统一管理 web/api/worker 三个应用和共享 packages                                                  |
 
 ---
 
@@ -66,15 +68,16 @@
 
 **进程说明：**
 
-| 进程 | 职责 | 对外端口 |
-|------|------|---------|
-| web | React 前端 | 5173（dev）/ 80（prod） |
-| api | NestJS REST API + SSE | 3001 |
-| worker | BullMQ Job 消费者，无 HTTP 接口 | — |
-| redis | BullMQ 队列存储 | 6379 |
+| 进程     | 职责                            | 对外端口                                   |
+| -------- | ------------------------------- | ------------------------------------------ |
+| web      | React 前端                      | 5173（dev）/ 80（prod）                    |
+| api      | NestJS REST API + SSE           | 3001                                       |
+| worker   | BullMQ Job 消费者，无 HTTP 接口 | —                                          |
+| redis    | BullMQ 队列存储                 | 6379                                       |
 | supabase | PostgreSQL + pgvector + Storage | 54321（API）/ 54322（DB）/ 54323（Studio） |
 
 **通信方式：**
+
 - 前端 → API：HTTP REST + SSE（问答流式输出）
 - API → Redis：BullMQ enqueue（文档 embedding job、评估 job）
 - Worker → Redis：BullMQ consume

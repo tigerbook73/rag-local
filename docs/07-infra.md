@@ -4,13 +4,13 @@
 
 ## 7.1 系统约束
 
-| 约束项 | 值 | 配置方式 |
-|--------|----|---------|
-| 单文件最大体积 | 10MB | `MAX_FILE_SIZE_MB` 环境变量 |
-| 支持文件类型 | TXT、MD | 硬编码白名单（扩展时修改） |
-| Worker 并发数 | 2 | `WORKER_CONCURRENCY` 环境变量 |
-| Job 最大自动重试次数 | 3 | `JOB_RETRY_COUNT` 环境变量 |
-| 知识库最大文档数 | 无限制 | 由磁盘空间决定 |
+| 约束项               | 值      | 配置方式                      |
+| -------------------- | ------- | ----------------------------- |
+| 单文件最大体积       | 10MB    | `MAX_FILE_SIZE_MB` 环境变量   |
+| 支持文件类型         | TXT、MD | 硬编码白名单（扩展时修改）    |
+| Worker 并发数        | 2       | `WORKER_CONCURRENCY` 环境变量 |
+| Job 最大自动重试次数 | 3       | `JOB_RETRY_COUNT` 环境变量    |
+| 知识库最大文档数     | 无限制  | 由磁盘空间决定                |
 
 所有约束通过配置项控制，不硬编码业务逻辑。
 
@@ -31,13 +31,14 @@
 
 ### 系统重启恢复
 
-| 场景 | 处理方式 |
-|------|---------|
-| Redis 未重启 | `waiting` 状态的 Job 保留在队列，正常处理 |
-| Redis 未重启，Worker 崩溃时有 `active` Job | BullMQ 超时后标记为 `stalled`，自动重试 |
-| Redis 重启（Job 全部丢失） | API/Worker 启动时扫描 DB 中 `status = 'processing'` 的文档，自动重新入队 |
+| 场景                                       | 处理方式                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| Redis 未重启                               | `waiting` 状态的 Job 保留在队列，正常处理                                |
+| Redis 未重启，Worker 崩溃时有 `active` Job | BullMQ 超时后标记为 `stalled`，自动重试                                  |
+| Redis 重启（Job 全部丢失）                 | API/Worker 启动时扫描 DB 中 `status = 'processing'` 的文档，自动重新入队 |
 
 **DB 扫描 Resume 逻辑（启动时执行）：**
+
 ```typescript
 // 查找所有卡在 processing 状态的文档
 const stuckDocs = await prisma.document.findMany({
@@ -66,10 +67,10 @@ for (const doc of stuckDocs) {
 
 每次问答将以下数据存入 `messages` 表，可在 History 详情页查看：
 
-| 字段 | 说明 |
-|------|------|
-| `ttft_ms` | 首字延迟：从收到请求到 LLM 返回第一个 token |
-| `total_ms` | 总响应时间：流式输出完全结束 |
+| 字段           | 说明                                                     |
+| -------------- | -------------------------------------------------------- |
+| `ttft_ms`      | 首字延迟：从收到请求到 LLM 返回第一个 token              |
+| `total_ms`     | 总响应时间：流式输出完全结束                             |
 | `retrieval_ms` | 检索耗时：从 embed query 到拿到最终 chunks（含可选步骤） |
 
 不设定延迟目标，数据用于后续分析和问题排查。
@@ -82,12 +83,12 @@ for (const doc of stuckDocs) {
 
 使用结构化日志（JSON 格式），推荐 **Pino**（NestJS 兼容，性能高）。
 
-| 级别 | 记录内容 |
-|------|---------|
-| `info` | 每次问答请求（query 摘要、retrieved chunks 数、延迟）、文档处理开始/完成 |
-| `warn` | LLM API 重试、Job 重试 |
-| `error` | LLM API 最终失败、Job 最终失败（含错误详情）、系统启动异常 |
-| `debug` | 检索中间数据（chunks、scores）、完整 Prompt 内容 |
+| 级别    | 记录内容                                                                 |
+| ------- | ------------------------------------------------------------------------ |
+| `info`  | 每次问答请求（query 摘要、retrieved chunks 数、延迟）、文档处理开始/完成 |
+| `warn`  | LLM API 重试、Job 重试                                                   |
+| `error` | LLM API 最终失败、Job 最终失败（含错误详情）、系统启动异常               |
+| `debug` | 检索中间数据（chunks、scores）、完整 Prompt 内容                         |
 
 日志输出到 stdout，Docker 环境下由容器运行时收集，开发环境输出到终端（Pino pretty 格式）。
 
@@ -100,19 +101,35 @@ for (const doc of stuckDocs) {
 ```yaml
 # docker-compose.yml 结构（示意）
 services:
-  frontend:
+  web:
     build: ./apps/web
     ports: ["80:80"]
+    depends_on:
+      api:
+        condition: service_healthy
 
   api:
     build: ./apps/api
     ports: ["3001:3001"]
-    depends_on: [redis, supabase]
+    depends_on:
+      redis:
+        condition: service_healthy
+      supabase:
+        condition: service_healthy
     env_file: .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   worker:
     build: ./apps/worker
-    depends_on: [redis, supabase]
+    depends_on:
+      redis:
+        condition: service_healthy
+      supabase:
+        condition: service_healthy
     volumes:
       - model-cache:/app/.model-cache
     env_file: .env
@@ -123,14 +140,20 @@ services:
     image: redis:7-alpine
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   supabase:
-    # Supabase Local Docker 镜像组（详见 Supabase 官方 docker-compose）
+    # 开发环境：通过 supabase CLI（supabase start）管理，不纳入此 compose
+    # 生产/演示：引入 Supabase 官方 docker-compose（待 Phase 0 完成后补充）
 
 volumes:
-  model-cache:     # BGE-M3 模型持久化缓存
-  redis-data:      # BullMQ 队列持久化
-  postgres-data:   # PostgreSQL 数据持久化
+  model-cache: # BGE-M3 模型持久化缓存
+  redis-data: # BullMQ 队列持久化
+  postgres-data: # PostgreSQL 数据持久化
 ```
 
 ### 首次启动顺序

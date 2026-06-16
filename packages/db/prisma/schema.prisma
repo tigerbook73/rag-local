@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Settings (singleton) ─────────────────────────────────────────────
+
+enum LlmProvider {
+  openai
+  deepseek
+}
+
+enum ChunkingStrategy {
+  fixed
+  semantic
+}
+
+model Settings {
+  id                       Int              @id @default(1)
+  llmProvider              LlmProvider      @default(deepseek) @map("llm_provider")
+  llmModel                 String           @default("deepseek-chat") @map("llm_model")
+  llmBaseUrl               String?          @map("llm_base_url")
+  chunkingStrategy         ChunkingStrategy @default(fixed) @map("chunking_strategy")
+  chunkSize                Int              @default(512) @map("chunk_size")
+  chunkOverlap             Int              @default(50) @map("chunk_overlap")
+  hydeEnabled              Boolean          @default(false) @map("hyde_enabled")
+  rerankingEnabled         Boolean          @default(false) @map("reranking_enabled")
+  topK                     Int              @default(5) @map("top_k")
+  onlineEvaluationEnabled  Boolean          @default(false) @map("online_evaluation_enabled")
+  conversationHistoryWindow Int             @default(50) @map("conversation_history_window")
+  updatedAt                DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
