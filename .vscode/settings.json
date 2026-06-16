@@ -11,6 +11,5 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "eslint.useFlatConfig": true,
-  "js/ts.tsdk.path": "node_modules/typescript/lib",
   "json.schemaDownload.enable": true
 }
