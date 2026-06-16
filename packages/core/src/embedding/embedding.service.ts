@@ -1,12 +1,10 @@
-import type { FeatureExtractionPipeline } from "@huggingface/transformers";
+import { pipeline, env, type FeatureExtractionPipeline } from "@huggingface/transformers";
 
 export class EmbeddingService {
   private pipe: FeatureExtractionPipeline | null = null;
 
   /** Load BGE-M3 ONNX model. Call once at process startup before serving requests. */
   async init(): Promise<void> {
-    // Dynamic import required: @huggingface/transformers is ESM-only
-    const { pipeline, env } = await import("@huggingface/transformers");
     env.cacheDir = process.env["HF_HOME"] ?? "./.model-cache";
     this.pipe = await pipeline("feature-extraction", "Xenova/bge-m3", {
       dtype: "fp32",

@@ -2,6 +2,7 @@
   "name": "@rag-local/api",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "nest start --watch --exec 'node --env-file=../../.env'",
     "build": "nest build",
