@@ -18,7 +18,7 @@ export default defineConfig({
       jsc: {
         parser: { syntax: "typescript", decorators: true },
         transform: { legacyDecorator: true, decoratorMetadata: true },
-        target: "es2021",
+        target: "es2022",
         keepClassNames: true,
       },
       module: { type: "es6" },
