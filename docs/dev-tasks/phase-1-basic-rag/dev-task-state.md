@@ -15,7 +15,7 @@ implementation (in_progress)
 
 ## Current Step
 
-Step 1: DB Schema
+Step 5: apps/web
 
 ## Requirements Phase
 
@@ -41,45 +41,45 @@ Step 1: DB Schema
 ### Step 1: DB Schema (packages/db)
 
 - step-type: intermediate
-- status: in_progress
+- status: done
 - Commit: —
-- Date: —
+- Date: 2026-06-17
 - auto-check: —
 - manual-check: —
 
 ### Step 2: packages/core (Chunking + Embedding + LLM + Retrieval)
 
 - step-type: intermediate
-- status: pending
+- status: done
 - Commit: —
-- Date: —
+- Date: 2026-06-17
 - auto-check: —
 - manual-check: —
 
 ### Step 3: apps/api (Documents + Conversations + Messages + Settings modules)
 
 - step-type: intermediate
-- status: pending
+- status: done
 - Commit: —
-- Date: —
+- Date: 2026-06-17
 - auto-check: —
 - manual-check: —
 
 ### Step 4: apps/worker (EmbeddingProcessor)
 
 - step-type: intermediate
-- status: pending
+- status: done
 - Commit: —
-- Date: —
+- Date: 2026-06-17
 - auto-check: —
 - manual-check: —
 
 ### Step 5: apps/web (Knowledge page + Chat page)
 
 - step-type: final
-- status: pending
+- status: done
 - Commit: —
-- Date: —
+- Date: 2026-06-17
 - auto-check: —
 - manual-check: —
 
