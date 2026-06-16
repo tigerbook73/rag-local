@@ -37,6 +37,7 @@ export function createChunkingStrategy(settings: {
 ```
 
 **FixedSizeChunkingStrategy 实现要点：**
+
 - 以字符数为单位（非 token 数），简单可控
 - overlap 区域内容在相邻 chunk 中重复出现，保留语义连续性
 - 边界处理：最后一个 chunk 不足 chunkSize 时保留全部剩余内容
@@ -49,7 +50,7 @@ export function createChunkingStrategy(settings: {
 // packages/core/src/embedding/embedding.service.ts
 
 export class EmbeddingService {
-  private pipeline: FeatureExtractionPipeline;  // @huggingface/transformers
+  private pipeline: FeatureExtractionPipeline; // @huggingface/transformers
 
   // 应用启动时调用一次，加载 BGE-M3 ONNX 模型（耗时，需等待完成再接受请求）
   async init(): Promise<void>;
@@ -72,19 +73,19 @@ export class EmbeddingService {
 // packages/core/src/llm/llm.service.ts
 
 export interface LLMMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: "system" | "user" | "assistant";
   content: string;
 }
 
 export interface LLMConfig {
-  provider: 'openai' | 'deepseek';
+  provider: "openai" | "deepseek";
   model: string;
   baseUrl?: string;
   apiKey: string;
 }
 
 export class LLMService {
-  private client: OpenAI;  // openai npm 包，通过 baseURL 参数支持 DeepSeek
+  private client: OpenAI; // openai npm 包，通过 baseURL 参数支持 DeepSeek
 
   // 从 Settings（DB）读取配置初始化，API 启动时调用
   async init(): Promise<void>;
@@ -121,7 +122,7 @@ export interface RetrievalResult {
 export class RetrievalService {
   constructor(
     private embeddingService: EmbeddingService,
-    private llmService: LLMService,       // HyDE 需要
+    private llmService: LLMService, // HyDE 需要
     private prisma: PrismaClient,
   ) {}
 
@@ -160,8 +161,8 @@ export interface EvaluationInput {
 }
 
 export interface MetricResult {
-  metric: 'faithfulness' | 'answer_relevancy' | 'context_precision';
-  score: number;   // 0.00 ~ 1.00
+  metric: "faithfulness" | "answer_relevancy" | "context_precision";
+  score: number; // 0.00 ~ 1.00
   reason: string;
 }
 
@@ -178,6 +179,7 @@ export class EvaluationService {
 ```
 
 **实现原则：**
+
 - 每个指标独立 LLM 调用，Prompt 分步拆解（参考 RAGAS prompt 结构）
 - LLM 返回格式要求 JSON：`{ "score": 0.85, "reason": "..." }`
 - 三个指标并行调用（`Promise.all`），减少总耗时
@@ -194,7 +196,7 @@ export class EvaluationService {
 export interface EmbeddingJobData {
   documentId: string;
   storagePath: string;
-  chunkingStrategy: 'fixed' | 'semantic';
+  chunkingStrategy: "fixed" | "semantic";
   chunkSize: number;
   chunkOverlap: number;
 }
@@ -209,7 +211,7 @@ export interface EvaluationJobData {
 
 // Queue 名称常量（API 和 Worker 共用）
 export const QUEUE_NAMES = {
-  EMBEDDING: 'embedding',
-  EVALUATION: 'evaluation',
+  EMBEDDING: "embedding",
+  EVALUATION: "evaluation",
 } as const;
 ```

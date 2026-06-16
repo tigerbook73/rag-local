@@ -40,10 +40,12 @@ rag-faq/
 │   │   │   └── main.ts
 │   │   └── package.json
 │   │
-│   └── worker/                   # BullMQ Worker（独立进程）
+│   └── worker/                   # NestJS BullMQ Worker（独立进程，无 HTTP）
 │       ├── src/
 │       │   ├── processors/
-│       │   │   └── embedding.processor.ts
+│       │   │   ├── embedding.processor.ts
+│       │   │   └── health.processor.ts
+│       │   ├── app.module.ts
 │       │   └── main.ts
 │       └── package.json
 │
@@ -57,12 +59,14 @@ rag-faq/
 │   │   │   └── evaluation/
 │   │   └── package.json
 │   │
-│   └── db/                       # Prisma schema + 生成的 client
+│   └── db/                       # Prisma schema + 生成的 client（ESM package）
 │       ├── prisma/
 │       │   └── schema.prisma
 │       ├── src/
-│       │   └── client.ts         # Prisma client 单例
-│       └── package.json
+│       │   ├── generated/prisma/ # Prisma 生成的 client（git-ignored）
+│       │   └── index.ts          # PrismaClient 单例导出
+│       ├── dist/                 # tsc 编译产物（git-ignored）
+│       └── package.json          # "type": "module"
 │
 └── eval/                         # DeepEval 离线评估脚本（Python，独立运行）
     ├── tests/
@@ -112,9 +116,9 @@ Turborepo 根据 `turbo.json` 中的 `dependsOn` 保证 `packages/core` 和 `pac
 // turbo.json
 {
   "tasks": {
-    "build":     { "dependsOn": ["^build"], "outputs": ["dist/**"] },
-    "dev":       { "persistent": true, "cache": false },
-    "test":      { "dependsOn": ["^build"] },
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "dev": { "dependsOn": ["^build"], "persistent": true, "cache": false },
+    "test": { "dependsOn": ["^build"] },
     "gen:types": { "cache": false },
     "db:migrate": { "cache": false }
   }
@@ -135,10 +139,10 @@ pnpm gen:types
 
 ## 2.4 BGE-M3 模型管理
 
-| 环境 | 策略 |
-|------|------|
-| 开发（宿主机） | Worker 首次运行时从 HuggingFace Hub 自动下载，缓存至项目根 `.model-cache/`（加入 `.gitignore`） |
-| 生产/演示（Docker） | Worker 容器通过命名卷 `model-cache` 持久化；首次启动自动下载（~570MB），容器重建后缓存保留 |
+| 环境                | 策略                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| 开发（宿主机）      | Worker 首次运行时从 HuggingFace Hub 自动下载，缓存至项目根 `.model-cache/`（加入 `.gitignore`） |
+| 生产/演示（Docker） | Worker 容器通过命名卷 `model-cache` 持久化；首次启动自动下载（~570MB），容器重建后缓存保留      |
 
 不将模型预打包进 Docker 镜像，避免镜像体积膨胀。
 
@@ -167,19 +171,19 @@ HF_HOME=./.model-cache
 
 所有配置通过 `.env` 文件管理，提交 `.env.example` 作为模板。
 
-| 变量 | 示例值 | 说明 |
-|------|--------|------|
-| `LLM_API_KEY` | `sk-...` | LLM provider API Key |
-| `LLM_BASE_URL` | `https://api.deepseek.com` | LLM base URL，切换 provider 只改这里 |
-| `LLM_MODEL` | `deepseek-chat` | 默认模型名 |
-| `REDIS_URL` | `redis://localhost:6379` | BullMQ 连接 |
-| `SUPABASE_URL` | `http://localhost:54321` | Supabase Local API URL |
-| `SUPABASE_SERVICE_KEY` | `eyJ...` | service_role key，Worker 直接操作 DB 需要 |
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:54322/postgres` | Prisma 连接字符串 |
-| `WORKER_CONCURRENCY` | `2` | 同时处理的 Embedding Job 数量 |
-| `MAX_FILE_SIZE_MB` | `10` | 单文件最大体积限制 |
-| `JOB_RETRY_COUNT` | `3` | Job 最大自动重试次数 |
-| `HF_HOME` | `./.model-cache` | HuggingFace 模型缓存目录 |
+| 变量                   | 示例值                                                    | 说明                                      |
+| ---------------------- | --------------------------------------------------------- | ----------------------------------------- |
+| `LLM_API_KEY`          | `sk-...`                                                  | LLM provider API Key                      |
+| `LLM_BASE_URL`         | `https://api.deepseek.com`                                | LLM base URL，切换 provider 只改这里      |
+| `LLM_MODEL`            | `deepseek-chat`                                           | 默认模型名                                |
+| `REDIS_URL`            | `redis://localhost:6379`                                  | BullMQ 连接                               |
+| `SUPABASE_URL`         | `http://localhost:54321`                                  | Supabase Local API URL                    |
+| `SUPABASE_SERVICE_KEY` | `eyJ...`                                                  | service_role key，Worker 直接操作 DB 需要 |
+| `DATABASE_URL`         | `postgresql://postgres:postgres@localhost:54322/postgres` | Prisma 连接字符串                         |
+| `WORKER_CONCURRENCY`   | `2`                                                       | 同时处理的 Embedding Job 数量             |
+| `MAX_FILE_SIZE_MB`     | `10`                                                      | 单文件最大体积限制                        |
+| `JOB_RETRY_COUNT`      | `3`                                                       | Job 最大自动重试次数                      |
+| `HF_HOME`              | `./.model-cache`                                          | HuggingFace 模型缓存目录                  |
 
 ### 配置优先级
 
@@ -188,3 +192,24 @@ Settings UI（存 DB）> .env > 代码默认值
 ```
 
 LLM 相关配置（model、baseURL）在 Settings UI 中保存后存入 `settings` 表，运行时读取 DB 值，`.env` 中的同名变量作为初始默认值和兜底。Chunking 等静态配置同理。
+
+---
+
+## 2.6 工具链
+
+| 工具       | 用途                                                                       | 配置文件               |
+| ---------- | -------------------------------------------------------------------------- | ---------------------- |
+| Prettier   | 代码格式化（双引号、有分号、2 空格缩进）                                   | `.prettierrc`          |
+| ESLint     | 逻辑规则检查；通过 `eslint-config-prettier` 关闭与 Prettier 冲突的格式规则 | `eslint.config.js`     |
+| Lefthook   | Git hook 管理（pre-commit 跑 lint + typecheck，commit-msg 跑 commitlint）  | `lefthook.yml`         |
+| commitlint | Commit message 格式校验（Conventional Commits，含 scope）                  | `commitlint.config.js` |
+
+Lefthook 相比 Husky 无需 `postinstall` 脚本，在 pnpm monorepo 中配置更简洁；`lefthook.yml` 位于项目根目录。
+
+**常用命令：**
+
+```bash
+pnpm lint        # ESLint 检查（Turborepo 并行跑各 package）
+pnpm format      # Prettier 格式化
+pnpm typecheck   # tsc --noEmit（各 package 独立执行）
+```

@@ -180,7 +180,7 @@ interface RetrievedChunk {
   documentName: string;
   content: string;
   similarityScore: number;
-  rerankScore?: number;            // Re-ranking 开启时有值
+  rerankScore?: number; // Re-ranking 开启时有值
 }
 
 interface LatencyInfo {
@@ -190,18 +190,18 @@ interface LatencyInfo {
 }
 
 interface Evaluation {
-  metric: 'faithfulness' | 'answer_relevancy' | 'context_precision';
-  score: number;                   // 0.00 ~ 1.00
+  metric: "faithfulness" | "answer_relevancy" | "context_precision";
+  score: number; // 0.00 ~ 1.00
   reason: string;
 }
 
 interface Document {
   id: string;
   filename: string;
-  fileType: 'txt' | 'md';
-  status: 'pending' | 'processing' | 'done' | 'failed';
+  fileType: "txt" | "md";
+  status: "pending" | "processing" | "done" | "failed";
   errorMessage?: string;
-  chunkingStrategy: 'fixed' | 'semantic';
+  chunkingStrategy: "fixed" | "semantic";
   chunkSize: number;
   chunkOverlap: number;
   totalChunks?: number;
@@ -210,17 +210,45 @@ interface Document {
 }
 
 interface Settings {
-  llmProvider: 'openai' | 'deepseek';
+  llmProvider: "openai" | "deepseek";
   llmModel: string;
   llmBaseUrl?: string;
-  chunkingStrategy: 'fixed' | 'semantic';
+  chunkingStrategy: "fixed" | "semantic";
   chunkSize: number;
   chunkOverlap: number;
   hydeEnabled: boolean;
   rerankingEnabled: boolean;
   topK: number;
   onlineEvaluationEnabled: boolean;
-  conversationHistoryWindow: number;  // ⚠️ D-03：单位（条消息 vs 对话轮）待决策
+  conversationHistoryWindow: number; // ⚠️ D-03：单位（条消息 vs 对话轮）待决策
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Message {
+  id: string;
+  conversationId: string;
+  role: "user" | "assistant";
+  content: string;
+  feedback?: "positive" | "negative";
+  retrievedChunks?: RetrievedChunk[]; // assistant 消息有值
+  ttftMs?: number;
+  totalMs?: number;
+  retrievalMs?: number;
+  createdAt: string;
+}
+
+interface EvaluationSummary {
+  messageId: string;
+  conversationId: string;
+  question: string; // 对应 user 消息 content
+  evaluations: Evaluation[];
+  createdAt: string;
 }
 
 interface PromptTemplate {

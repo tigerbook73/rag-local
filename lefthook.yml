@@ -1,0 +1,17 @@
+pre-commit:
+  commands:
+    lint:
+      glob: "*.{ts,tsx,js}"
+      run: pnpm lint
+    format-check:
+      glob: "*.{ts,tsx,js,json,md,yaml,yml}"
+      run: pnpm format:check
+    # aisk-test-review-gate-check-reviewed-by-commit-marker:
+    #   run: node .aisk/test-review-gate/scripts/check-reviewed-by-commit-marker.cjs {staged_files}
+    # aisk-test-review-gate-check-test-cases-match-it:
+    #   run: node .aisk/test-review-gate/scripts/check-test-cases-match-it.cjs {staged_files}
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}

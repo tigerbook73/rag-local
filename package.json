@@ -1,0 +1,52 @@
+{
+  "name": "rag-local",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "test:e2e": "pnpm --filter @rag-local/web test:e2e",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yaml,yml}\" --ignore-path .gitignore --ignore-path .prettierignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yaml,yml}\" --ignore-path .gitignore --ignore-path .prettierignore",
+    "db:generate": "pnpm --filter @rag-local/db db:generate",
+    "db:migrate": "pnpm --filter @rag-local/db db:migrate",
+    "db:seed": "pnpm --filter @rag-local/db db:seed",
+    "gen:types": "openapi-typescript http://localhost:3001/api-json -o apps/web/src/types/api.ts",
+    "preview": "pnpm --filter @rag-local/web preview",
+    "infra:up": "docker compose -f docker-compose.dev.yml up -d && supabase start",
+    "infra:down": "docker compose -f docker-compose.dev.yml down && supabase stop"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@eslint/js": "^9.28.0",
+    "@types/node": "^22.19.21",
+    "eslint": "^9.28.0",
+    "eslint-config-prettier": "^10.1.5",
+    "lefthook": "^2.1.9",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.5.3",
+    "supabase": "^2.106.0",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.0"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.33.3",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "lefthook",
+      "msgpackr-extract",
+      "prisma"
+    ]
+  }
+}

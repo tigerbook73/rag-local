@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+.turbo
+
+# Prisma generated client
+packages/db/src/generated/prisma
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Model cache
+.model-cache
+
+# Test
+coverage
+playwright-report
+test-results
+
+# Misc
+.DS_Store
+*.log
