@@ -40,10 +40,12 @@ rag-faq/
 │   │   │   └── main.ts
 │   │   └── package.json
 │   │
-│   └── worker/                   # BullMQ Worker（独立进程）
+│   └── worker/                   # NestJS BullMQ Worker（独立进程，无 HTTP）
 │       ├── src/
 │       │   ├── processors/
-│       │   │   └── embedding.processor.ts
+│       │   │   ├── embedding.processor.ts
+│       │   │   └── health.processor.ts
+│       │   ├── app.module.ts
 │       │   └── main.ts
 │       └── package.json
 │
@@ -57,12 +59,14 @@ rag-faq/
 │   │   │   └── evaluation/
 │   │   └── package.json
 │   │
-│   └── db/                       # Prisma schema + 生成的 client
+│   └── db/                       # Prisma schema + 生成的 client（ESM package）
 │       ├── prisma/
 │       │   └── schema.prisma
 │       ├── src/
-│       │   └── client.ts         # Prisma client 单例
-│       └── package.json
+│       │   ├── generated/prisma/ # Prisma 生成的 client（git-ignored）
+│       │   └── index.ts          # PrismaClient 单例导出
+│       ├── dist/                 # tsc 编译产物（git-ignored）
+│       └── package.json          # "type": "module"
 │
 └── eval/                         # DeepEval 离线评估脚本（Python，独立运行）
     ├── tests/
@@ -113,7 +117,7 @@ Turborepo 根据 `turbo.json` 中的 `dependsOn` 保证 `packages/core` 和 `pac
 {
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
-    "dev": { "persistent": true, "cache": false },
+    "dev": { "dependsOn": ["^build"], "persistent": true, "cache": false },
     "test": { "dependsOn": ["^build"] },
     "gen:types": { "cache": false },
     "db:migrate": { "cache": false }

@@ -23,9 +23,9 @@
 
 **测试框架**
 
-- 后端（api）：Jest + Supertest —— `/health` endpoint + 返回 `{ status: 'ok' }` 的集成测试
+- 后端（api）：Vitest（unplugin-swc 处理 NestJS decorator metadata）+ Supertest —— `/health` endpoint + 返回 `{ status: 'ok' }` 的集成测试
 - 前端（web）：Vitest + Testing Library —— HelloWorld 组件渲染测试
-- Worker：Jest —— BullMQ 连接 Redis、入队 / 消费一个 Noop Job
+- Worker：Vitest（unplugin-swc 处理 NestJS decorator metadata）—— BullMQ 连接 Redis、入队 / 消费一个 Noop Job
 - E2E：Playwright —— 访问首页返回 200，控制台无 JS 错误
 - 外部依赖连通性测试（手动触发，不进 CI 主流程，通过 `pnpm run infra:check` 执行）：
   - LLM：调通 DeepSeek / OpenAI，返回任意非空响应
@@ -129,12 +129,12 @@
 
 ### 工具
 
-| 层级              | 工具                               |
-| ----------------- | ---------------------------------- |
-| Backend 单元测试  | Jest                               |
-| Frontend 单元测试 | Vitest                             |
-| 集成测试（API）   | Jest + Supertest + 真实 DB / Redis |
-| E2E               | Playwright                         |
+| 层级              | 工具                                 |
+| ----------------- | ------------------------------------ |
+| Backend 单元测试  | Vitest（集成 unplugin-swc）          |
+| Frontend 单元测试 | Vitest                               |
+| 集成测试（API）   | Vitest + Supertest + 真实 DB / Redis |
+| E2E               | Playwright                           |
 
 集成测试需要运行中的 Redis 和 Supabase Local，通过 `docker-compose.dev.yml` 提供，CI 环境同样启动这两个服务。
 

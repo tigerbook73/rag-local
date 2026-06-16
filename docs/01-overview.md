@@ -60,9 +60,10 @@
       │ BullMQ consume      │ Prisma / Storage API
       ▼                     ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                      BullMQ Worker                               │
-│  文档处理：文件读取 → 解析 → Chunking → BGE-M3 → 写入 pgvector   │
-│  评估任务：LLM-as-judge 三指标打分（⚠️ D-01：执行位置待决策）     │
+│              NestJS BullMQ Worker（无 HTTP，createApplicationContext）│
+│  @Processor / WorkerHost 消费 embedding 队列                        │
+│  文档处理：文件读取 → 解析 → Chunking → BGE-M3 → 写入 pgvector     │
+│  评估任务：LLM-as-judge 三指标打分（⚠️ D-01：执行位置待决策）       │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
