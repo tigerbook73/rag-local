@@ -3,6 +3,7 @@ import type { Response } from "express";
 import { PrismaService } from "../../common/prisma.service.js";
 import { SettingsService } from "../settings/settings.service.js";
 import { EmbeddingService, LLMService, RetrievalService, type LLMMessage } from "@rag-local/core";
+import { Prisma } from "@rag-local/db";
 import type { SendMessageDto } from "./dto/send-message.dto.js";
 import type { UpdateFeedbackDto } from "./dto/update-feedback.dto.js";
 
@@ -85,7 +86,7 @@ export class MessagesService {
         conversationId,
         role: "assistant",
         content: fullContent,
-        retrievedChunks: chunks,
+        retrievedChunks: chunks as unknown as Prisma.InputJsonValue,
         ttftMs: ttftMs ?? 0,
         totalMs,
         retrievalMs,
