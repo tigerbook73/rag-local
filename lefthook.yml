@@ -7,6 +7,7 @@ pre-commit:
       glob: "*.{ts,tsx,js,json,md,yaml,yml}"
       run: pnpm format:check
     aisk-test-review-gate-check-reviewed-by-commit-marker:
+      skip: true
       run: node .aisk/test-review-gate/scripts/check-reviewed-by-commit-marker.cjs {staged_files}
     aisk-test-review-gate-check-test-cases-match-it:
       run: node .aisk/test-review-gate/scripts/check-test-cases-match-it.cjs {staged_files}

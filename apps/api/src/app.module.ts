@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { LoggerModule } from "nestjs-pino";
 import { HealthController } from "./modules/health/health.controller";
+import { HealthService } from "./modules/health/health.service";
 
 @Module({
   imports: [
@@ -14,5 +15,6 @@ import { HealthController } from "./modules/health/health.controller";
     }),
   ],
   controllers: [HealthController],
+  providers: [HealthService],
 })
 export class AppModule {}
