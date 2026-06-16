@@ -8,7 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Settings (singleton) ─────────────────────────────────────────────
+// ── Enums ────────────────────────────────────────────────────────────
 
 enum LlmProvider {
   openai
@@ -20,20 +20,147 @@ enum ChunkingStrategy {
   semantic
 }
 
+enum MessageRole {
+  user
+  assistant
+}
+
+enum MessageFeedback {
+  positive
+  negative
+}
+
+enum DocumentStatus {
+  pending
+  processing
+  done
+  failed
+}
+
+enum DocumentFiletype {
+  txt
+  md
+}
+
+enum EvalMetric {
+  faithfulness
+  answer_relevancy
+  context_precision
+}
+
+// ── Settings (singleton) ─────────────────────────────────────────────
+
 model Settings {
-  id                       Int              @id @default(1)
-  llmProvider              LlmProvider      @default(deepseek) @map("llm_provider")
-  llmModel                 String           @default("deepseek-chat") @map("llm_model")
-  llmBaseUrl               String?          @map("llm_base_url")
-  chunkingStrategy         ChunkingStrategy @default(fixed) @map("chunking_strategy")
-  chunkSize                Int              @default(512) @map("chunk_size")
-  chunkOverlap             Int              @default(50) @map("chunk_overlap")
-  hydeEnabled              Boolean          @default(false) @map("hyde_enabled")
-  rerankingEnabled         Boolean          @default(false) @map("reranking_enabled")
-  topK                     Int              @default(5) @map("top_k")
-  onlineEvaluationEnabled  Boolean          @default(false) @map("online_evaluation_enabled")
-  conversationHistoryWindow Int             @default(50) @map("conversation_history_window")
-  updatedAt                DateTime         @default(now()) @updatedAt @map("updated_at")
+  id                        Int              @id @default(1)
+  llmProvider               LlmProvider      @default(deepseek) @map("llm_provider")
+  llmModel                  String           @default("deepseek-chat") @map("llm_model")
+  llmBaseUrl                String?          @map("llm_base_url")
+  chunkingStrategy          ChunkingStrategy @default(fixed) @map("chunking_strategy")
+  chunkSize                 Int              @default(512) @map("chunk_size")
+  chunkOverlap              Int              @default(50) @map("chunk_overlap")
+  hydeEnabled               Boolean          @default(false) @map("hyde_enabled")
+  rerankingEnabled          Boolean          @default(false) @map("reranking_enabled")
+  topK                      Int              @default(5) @map("top_k")
+  onlineEvaluationEnabled   Boolean          @default(false) @map("online_evaluation_enabled")
+  conversationHistoryWindow Int              @default(50) @map("conversation_history_window")
+  updatedAt                 DateTime         @default(now()) @updatedAt @map("updated_at")
 
   @@map("settings")
+}
+
+// ── Conversations ────────────────────────────────────────────────────
+
+model Conversation {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String    @default("")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  messages  Message[]
+
+  @@map("conversations")
+}
+
+// ── Messages ─────────────────────────────────────────────────────────
+
+model Message {
+  id              String           @id @default(uuid()) @db.Uuid
+  conversationId  String           @map("conversation_id") @db.Uuid
+  role            MessageRole
+  content         String
+  feedback        MessageFeedback?
+  retrievedChunks Json?            @map("retrieved_chunks")
+  ttftMs          Int?             @map("ttft_ms")
+  totalMs         Int?             @map("total_ms")
+  retrievalMs     Int?             @map("retrieval_ms")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  conversation    Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  evaluations     Evaluation[]
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+// ── Documents ────────────────────────────────────────────────────────
+
+model Document {
+  id                    String           @id @default(uuid()) @db.Uuid
+  filename              String
+  fileType              DocumentFiletype @map("file_type")
+  storagePath           String           @map("storage_path")
+  status                DocumentStatus   @default(pending)
+  errorMessage          String?          @map("error_message")
+  chunkingStrategy      ChunkingStrategy @default(fixed) @map("chunking_strategy")
+  chunkSize             Int              @map("chunk_size")
+  chunkOverlap          Int              @map("chunk_overlap")
+  totalChunks           Int?             @map("total_chunks")
+  processingStartedAt   DateTime?        @map("processing_started_at") @db.Timestamptz
+  processingCompletedAt DateTime?        @map("processing_completed_at") @db.Timestamptz
+  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  chunks                Chunk[]
+
+  @@map("documents")
+}
+
+// ── Chunks ───────────────────────────────────────────────────────────
+
+model Chunk {
+  id         String                      @id @default(uuid()) @db.Uuid
+  documentId String                      @map("document_id") @db.Uuid
+  content    String
+  embedding  Unsupported("vector(1024)")
+  chunkIndex Int                         @map("chunk_index")
+  metadata   Json?
+  createdAt  DateTime                    @default(now()) @map("created_at") @db.Timestamptz
+  document   Document                    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("chunks")
+}
+
+// ── Evaluations ──────────────────────────────────────────────────────
+
+model Evaluation {
+  id        String     @id @default(uuid()) @db.Uuid
+  messageId String     @map("message_id") @db.Uuid
+  metric    EvalMetric
+  score     Decimal    @db.Decimal(3, 2)
+  reason    String?
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  message   Message    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("evaluations")
+}
+
+// ── Prompt Templates ─────────────────────────────────────────────────
+
+model PromptTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  content   String
+  isActive  Boolean  @default(false) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("prompt_templates")
 }
