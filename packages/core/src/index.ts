@@ -17,3 +17,4 @@ export type { RetrievalOptions, RetrievalResult } from "./retrieval/retrieval.se
 export type { RetrievedChunk, LatencyInfo } from "./types/retrieval.js";
 export type { EmbeddingJobData, EvaluationJobData } from "./types/jobs.js";
 export { QUEUE_NAMES } from "./types/jobs.js";
+export { parseRedisUrl } from "./config/redis.js";

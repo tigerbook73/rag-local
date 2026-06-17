@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import type { UpdateSettingsDto } from "./dto/update-settings.dto.js";
+import { SETTINGS_KEYS, SETTINGS_DEFAULTS } from "./settings.constants.js";
 
 export interface AppSettings {
   llmProvider: "openai" | "deepseek";
@@ -21,19 +22,11 @@ const PROVIDER_CONFIG: Record<"openai" | "deepseek", { model: string; baseUrl: s
   openai: { model: "gpt-4o", baseUrl: null },
 };
 
-const DEFAULTS: Record<string, string> = {
-  llm_provider: "deepseek",
-  chunking_strategy: "fixed",
-  chunk_size: "512",
-  chunk_overlap: "50",
-  hyde_enabled: "false",
-  reranking_enabled: "false",
-  top_k: "5",
-  online_evaluation_enabled: "false",
-  conversation_history_window: "50",
-};
-
-const STATIC_KEYS = ["chunking_strategy", "chunk_size", "chunk_overlap"] as const;
+const STATIC_KEYS = [
+  SETTINGS_KEYS.CHUNKING_STRATEGY,
+  SETTINGS_KEYS.CHUNK_SIZE,
+  SETTINGS_KEYS.CHUNK_OVERLAP,
+] as const;
 
 function toBoolean(v: string): boolean {
   return v === "true";
@@ -45,24 +38,24 @@ export class SettingsService {
 
   async getSettings(): Promise<AppSettings> {
     const rows = await this.prisma.setting.findMany();
-    const kv: Record<string, string> = { ...DEFAULTS };
+    const kv: Record<string, string> = { ...SETTINGS_DEFAULTS };
     for (const row of rows) kv[row.key] = row.value;
 
-    const llmProvider = kv["llm_provider"] as "openai" | "deepseek";
+    const llmProvider = kv[SETTINGS_KEYS.LLM_PROVIDER] as "openai" | "deepseek";
     const { model: llmModel, baseUrl: llmBaseUrl } = PROVIDER_CONFIG[llmProvider];
 
     return {
       llmProvider,
       llmModel,
       llmBaseUrl,
-      chunkingStrategy: kv["chunking_strategy"] as "fixed" | "semantic",
-      chunkSize: parseInt(kv["chunk_size"]!),
-      chunkOverlap: parseInt(kv["chunk_overlap"]!),
-      hydeEnabled: toBoolean(kv["hyde_enabled"]!),
-      rerankingEnabled: toBoolean(kv["reranking_enabled"]!),
-      topK: parseInt(kv["top_k"]!),
-      onlineEvaluationEnabled: toBoolean(kv["online_evaluation_enabled"]!),
-      conversationHistoryWindow: parseInt(kv["conversation_history_window"]!),
+      chunkingStrategy: kv[SETTINGS_KEYS.CHUNKING_STRATEGY] as "fixed" | "semantic",
+      chunkSize: parseInt(kv[SETTINGS_KEYS.CHUNK_SIZE]!),
+      chunkOverlap: parseInt(kv[SETTINGS_KEYS.CHUNK_OVERLAP]!),
+      hydeEnabled: toBoolean(kv[SETTINGS_KEYS.HYDE_ENABLED]!),
+      rerankingEnabled: toBoolean(kv[SETTINGS_KEYS.RERANKING_ENABLED]!),
+      topK: parseInt(kv[SETTINGS_KEYS.TOP_K]!),
+      onlineEvaluationEnabled: toBoolean(kv[SETTINGS_KEYS.ONLINE_EVALUATION_ENABLED]!),
+      conversationHistoryWindow: parseInt(kv[SETTINGS_KEYS.CONVERSATION_HISTORY_WINDOW]!),
     };
   }
 
@@ -70,15 +63,15 @@ export class SettingsService {
     const before = await this.getSettings();
 
     const dtoToKey: Partial<Record<keyof UpdateSettingsDto, string>> = {
-      llmProvider: "llm_provider",
-      chunkingStrategy: "chunking_strategy",
-      chunkSize: "chunk_size",
-      chunkOverlap: "chunk_overlap",
-      hydeEnabled: "hyde_enabled",
-      rerankingEnabled: "reranking_enabled",
-      topK: "top_k",
-      onlineEvaluationEnabled: "online_evaluation_enabled",
-      conversationHistoryWindow: "conversation_history_window",
+      llmProvider: SETTINGS_KEYS.LLM_PROVIDER,
+      chunkingStrategy: SETTINGS_KEYS.CHUNKING_STRATEGY,
+      chunkSize: SETTINGS_KEYS.CHUNK_SIZE,
+      chunkOverlap: SETTINGS_KEYS.CHUNK_OVERLAP,
+      hydeEnabled: SETTINGS_KEYS.HYDE_ENABLED,
+      rerankingEnabled: SETTINGS_KEYS.RERANKING_ENABLED,
+      topK: SETTINGS_KEYS.TOP_K,
+      onlineEvaluationEnabled: SETTINGS_KEYS.ONLINE_EVALUATION_ENABLED,
+      conversationHistoryWindow: SETTINGS_KEYS.CONVERSATION_HISTORY_WINDOW,
     };
 
     const upserts = Object.entries(dtoToKey)

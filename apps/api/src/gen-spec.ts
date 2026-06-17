@@ -14,11 +14,12 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module.js";
+import { API_PREFIX } from "./common/constants.js";
 
 async function generate(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.setGlobalPrefix("api/v1");
+  app.setGlobalPrefix(API_PREFIX);
 
   const config = new DocumentBuilder().setTitle("RAG Local API").setVersion("1.0").build();
   const document = SwaggerModule.createDocument(app, config);

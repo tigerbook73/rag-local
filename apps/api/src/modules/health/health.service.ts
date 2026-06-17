@@ -1,6 +1,7 @@
 import { Injectable, OnApplicationBootstrap, OnModuleDestroy } from "@nestjs/common";
 import { Queue, QueueEvents } from "bullmq";
 import { prisma } from "@rag-local/db";
+import { parseRedisUrl } from "@rag-local/core";
 
 const HEALTH_QUEUE = "health-check";
 
@@ -10,10 +11,7 @@ export class HealthService implements OnApplicationBootstrap, OnModuleDestroy {
   private queueEvents!: QueueEvents;
 
   onApplicationBootstrap(): void {
-    const { hostname: host, port: portStr } = new URL(
-      process.env["REDIS_URL"] ?? "redis://localhost:6379",
-    );
-    const connection = { host, port: Number(portStr || 6379) };
+    const connection = parseRedisUrl();
     this.queue = new Queue(HEALTH_QUEUE, { connection });
     this.queueEvents = new QueueEvents(HEALTH_QUEUE, { connection });
   }
