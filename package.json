@@ -15,7 +15,7 @@
     "db:migrate": "pnpm --filter @rag-local/db db:migrate",
     "db:seed": "pnpm --filter @rag-local/db db:seed",
     "gen:spec": "pnpm --filter @rag-local/api gen:spec",
-    "gen:types": "pnpm gen:spec && openapi-typescript apps/api/openapi.json -o apps/web/src/types/api.ts",
+    "gen:types": "pnpm gen:spec && openapi-typescript openapi.json -o apps/web/src/types/api.ts",
     "preview": "pnpm --filter @rag-local/web preview",
     "infra:up": "docker compose -f docker-compose.dev.yml up -d && supabase start",
     "infra:down": "docker compose -f docker-compose.dev.yml down && supabase stop"

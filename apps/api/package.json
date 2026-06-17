@@ -10,7 +10,7 @@
     "test:watch": "vitest",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "gen:spec": "nest build && node dist/main.js --spec ../../openapi.json"
+    "gen:spec": "nest build && node dist/gen-spec.js ../../openapi.json"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

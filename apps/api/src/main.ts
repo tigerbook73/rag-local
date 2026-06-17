@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import fs from "node:fs";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { ValidationPipe } from "@nestjs/common";
@@ -24,15 +23,6 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder().setTitle("RAG Local API").setVersion("1.0").build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup("api", app, document);
-
-  // --spec <path>: write OpenAPI spec to file and exit (no HTTP server started)
-  const specFlagIdx = process.argv.indexOf("--spec");
-  if (specFlagIdx !== -1) {
-    const outPath = process.argv[specFlagIdx + 1] ?? "openapi.json";
-    fs.writeFileSync(outPath, JSON.stringify(document, null, 2));
-    await app.close();
-    return;
-  }
 
   const port = Number(process.env["PORT"] ?? 3001);
   await app.listen(port);
