@@ -7,9 +7,9 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "dev": "tsc --watch --preserveWatchOutput",
-    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
-    "db:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
-    "db:push:test": "dotenv -e ../../.env.test -- prisma db push --skip-generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:push:test": "dotenv -e .env.test -- prisma db push --skip-generate",
     "db:generate": "prisma generate",
     "build": "prisma generate && tsc",
     "typecheck": "tsc --noEmit",

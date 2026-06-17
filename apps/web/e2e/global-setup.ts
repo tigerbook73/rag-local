@@ -12,7 +12,10 @@ export default async function globalSetup(): Promise<void> {
     throw new Error("[e2e globalSetup] DATABASE_URL is not set. Check .env.test or CI env vars.");
   }
 
-  const schema = new URL(DB_URL).searchParams.get("schema") ?? "public";
+  // Support both ?schema=test and ?search_path=test,extensions URL formats
+  const params = new URL(DB_URL).searchParams;
+  const schema =
+    params.get("schema") ?? params.get("search_path")?.split(",")[0].trim() ?? "public";
 
   // Guard: refuse to run against public schema to prevent dev data pollution
   if (schema === "public") {
@@ -39,8 +42,8 @@ export default async function globalSetup(): Promise<void> {
     }
   }
 
-  // Strip Prisma-specific ?schema param — pg client uses SET search_path instead
-  const pgUrl = DB_URL.replace(/[?&]schema=[^&]*/, "").replace(/[?&]$/, "");
+  // Strip Prisma-specific URL params — pg client uses SET search_path instead
+  const pgUrl = DB_URL.replace(/[?&](schema|search_path)=[^&]*/g, "").replace(/[?&]$/, "");
 
   const client = new Client({ connectionString: pgUrl });
   await client.connect();
