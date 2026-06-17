@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 职责
 
-- 消费 `embedding` 队列的 Job：文件下载 → 解析 → Chunking → BGE-M3 Embedding → 写入 chunks 表
-- 维护自己的 EmbeddingService 实例（独立于 api 进程），模型在 `onModuleInit` 时加载
+- 消费 `embedding` 队列的 Job：文件下载 → 解析 → Chunking → 调用 Embedding Sidecar → 写入 chunks 表
+- 维护自己的 EmbeddingService 实例（独立于 api 进程），`onModuleInit` 时设置 sidecar URL
 
 ### 关键非默认行为
 
@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Supabase 直接创建：** Worker 中 `createClient()` 直接调用，不经过 NestJS 模块，使用 `SUPABASE_SERVICE_KEY`（绕过 RLS）。
 
-**Embedding 模型加载时机：** `EmbeddingProcessor.onModuleInit()` 时调用 `embeddingService.init()`，首次运行会从 HuggingFace Hub 下载 BGE-M3 ONNX 模型（~570MB），缓存至 `HF_HOME`（开发：`.model-cache/`，Docker：命名卷 `model-cache`）。
+**EmbeddingService 初始化：** `EmbeddingProcessor.onModuleInit()` 时同步调用 `embeddingService.init()`，仅读取 `EMBEDDING_SERVICE_URL` 环境变量（默认 `http://localhost:8000`），无模型下载或加载等待。模型由 embedding sidecar 单独管理。
 
 **re-embedding 幂等性：** Worker 处理前先 `DELETE FROM chunks WHERE document_id = $1::uuid` 清除旧向量，保证重试不产生重复 chunks。使用 `$executeRawUnsafe`（pgvector 字段无 Prisma 类型支持）。
 

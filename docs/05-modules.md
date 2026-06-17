@@ -46,24 +46,39 @@ export function createChunkingStrategy(settings: {
 
 ## 5.2 Embedding Service
 
+Embedding 由外部 Python sidecar（`services/embedding/`）提供，`EmbeddingService` 是该 sidecar 的 HTTP 客户端，不再在 Node.js 进程内加载模型。
+
 ```typescript
 // packages/core/src/embedding/embedding.service.ts
 
 export class EmbeddingService {
-  private pipeline: FeatureExtractionPipeline; // @huggingface/transformers
+  private baseUrl: string;
 
-  // 应用启动时调用一次，加载 BGE-M3 ONNX 模型（耗时，需等待完成再接受请求）
-  async init(): Promise<void>;
+  // 同步，仅读取 EMBEDDING_SERVICE_URL 环境变量（无模型加载开销）
+  init(): void;
 
-  // 单条文本 embedding，返回 1024 维向量
+  // 单条文本 embedding，POST /embed → 返回 1024 维向量
   async embed(text: string): Promise<number[]>;
 
-  // 批量 embedding，Worker 处理文档时使用（减少模型调用开销）
+  // 批量 embedding，单次 POST /embed/batch（非 N 次并行调用）
   async embedBatch(texts: string[]): Promise<number[][]>;
 }
 ```
 
-**注意：** `EmbeddingService` 为单例，模型在进程启动时加载，不在每次请求时重新加载。API 进程和 Worker 进程各维护自己的单例实例。
+**注意：** `init()` 现在是同步方法。API 和 Worker 进程各持一个实例，但真正的模型由 embedding sidecar 单独管理。使用 `embed()`/`embedBatch()` 前必须先调用 `init()`，否则抛出异常。
+
+## 5.2.1 Embedding Sidecar（Python FastAPI）
+
+```
+services/embedding/
+├── main.py          # FastAPI app（lifespan 加载模型，/health /embed /embed/batch）
+├── requirements.txt # sentence-transformers, torch>=2.6, fastapi, uvicorn
+└── Dockerfile       # python:3.12-slim + torch cu124
+```
+
+- 模型：`BAAI/bge-m3`（可通过 `EMBEDDING_MODEL` 环境变量覆盖）
+- 设备：自动选择 CUDA（优先）或 CPU
+- `normalize_embeddings=True`，输出已 L2 归一化（与 pgvector cosine similarity 等价于点积）
 
 ---
 

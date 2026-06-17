@@ -6,6 +6,7 @@ import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module.js";
 import { AllExceptionsFilter } from "./common/all-exceptions.filter.js";
 import { validateEnv } from "./common/env.js";
+import { API_PREFIX } from "./common/constants.js";
 
 async function bootstrap() {
   validateEnv();
@@ -15,7 +16,7 @@ async function bootstrap() {
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.setGlobalPrefix("api/v1");
+  app.setGlobalPrefix(API_PREFIX);
   app.enableCors({
     origin: process.env["CORS_ORIGIN"] ?? "http://localhost:5173",
   });

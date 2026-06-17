@@ -116,6 +116,8 @@ services:
         condition: service_healthy
       supabase:
         condition: service_healthy
+      embedding:
+        condition: service_healthy
     env_file: .env
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
@@ -130,11 +132,30 @@ services:
         condition: service_healthy
       supabase:
         condition: service_healthy
-    volumes:
-      - model-cache:/app/.model-cache
+      embedding:
+        condition: service_healthy
     env_file: .env
+
+  embedding:
+    build: ./services/embedding
+    ports: ["8000:8000"]
+    volumes:
+      - model-cache:/root/.cache/huggingface
     environment:
-      - HF_HOME=/app/.model-cache
+      - HF_HOME=/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   redis:
     image: redis:7-alpine
@@ -151,7 +172,7 @@ services:
     # 生产/演示：引入 Supabase 官方 docker-compose（待 Phase 0 完成后补充）
 
 volumes:
-  model-cache: # BGE-M3 模型持久化缓存
+  model-cache: # BGE-M3 模型持久化缓存（embedding sidecar）
   redis-data: # BullMQ 队列持久化
   postgres-data: # PostgreSQL 数据持久化
 ```
@@ -161,10 +182,10 @@ volumes:
 ```
 1. supabase（等待 DB 健康检查通过）
 2. redis
-3. api（启动时运行 Prisma migrate，扫描 stuck documents 重新入队）
-4. worker（依赖 redis + supabase；Prisma migrate 需在 Worker 消费前完成，
-          可通过 api healthcheck 或单独 migrate init container 保证）
-5. frontend
+3. embedding（start_period: 60s，首次启动下载模型需等待）
+4. api（启动时运行 Prisma migrate，扫描 stuck documents 重新入队）
+5. worker（依赖 redis + supabase + embedding；Prisma migrate 需在 Worker 消费前完成）
+6. frontend
 ```
 
 `depends_on` + `healthcheck` 在 docker-compose.yml 中配置，确保启动顺序。
