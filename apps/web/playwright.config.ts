@@ -27,6 +27,8 @@ function loadTestEnv(): void {
 loadTestEnv();
 
 const isCI = !!process.env["CI"];
+const TEST_API_PORT = process.env["TEST_API_PORT"] ?? "3001";
+const TEST_WEB_PORT = process.env["TEST_WEB_PORT"] ?? "5173";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -39,7 +41,7 @@ export default defineConfig({
   globalTeardown: "./e2e/global-teardown.ts",
 
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: `http://localhost:${TEST_WEB_PORT}`,
     trace: "on-first-retry",
   },
 
@@ -47,16 +49,16 @@ export default defineConfig({
 
   webServer: [
     {
-      // Vite dev server (frontend) — uses dev env, no test-specific config needed
-      command: "pnpm dev",
-      url: "http://localhost:5173",
+      // WEB_PORT / API_PORT are injected for vite.config.ts to pick up
+      command: `WEB_PORT=${TEST_WEB_PORT} API_PORT=${TEST_API_PORT} pnpm dev`,
+      url: `http://localhost:${TEST_WEB_PORT}`,
       reuseExistingServer: !isCI,
       timeout: 30_000,
     },
     {
-      // NestJS API with test environment (.env.test → test schema + test-documents bucket)
-      command: "pnpm --filter @rag-local/api dev:test",
-      url: "http://localhost:3001/api/v1/health",
+      // PORT is injected so NestJS listens on the test port (takes precedence over --env-file)
+      command: `PORT=${TEST_API_PORT} pnpm --filter @rag-local/api dev:test`,
+      url: `http://localhost:${TEST_API_PORT}/api/v1/health`,
       reuseExistingServer: !isCI,
       timeout: 60_000,
     },

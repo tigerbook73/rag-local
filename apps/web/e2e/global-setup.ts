@@ -1,5 +1,6 @@
 import { Client } from "pg";
 import { createClient } from "@supabase/supabase-js";
+import { Queue } from "bullmq";
 import { seedTestData } from "./seed.js";
 
 const DB_URL = process.env["DATABASE_URL"] ?? "";
@@ -15,7 +16,7 @@ export default async function globalSetup(): Promise<void> {
   // Support both ?schema=test and ?search_path=test,extensions URL formats
   const params = new URL(DB_URL).searchParams;
   const schema =
-    params.get("schema") ?? params.get("search_path")?.split(",")[0].trim() ?? "public";
+    params.get("schema") ?? params.get("search_path")?.split(",")[0]?.trim() ?? "public";
 
   // Guard: refuse to run against public schema to prevent dev data pollution
   if (schema === "public") {
@@ -26,7 +27,17 @@ export default async function globalSetup(): Promise<void> {
     );
   }
 
-  // 1. Ensure test-documents bucket exists (idempotent — safe to call on every run)
+  // 1. Flush BullMQ test queues — prevents stale jobs from a previous run being picked up
+  const redisUrl = process.env["REDIS_URL"] ?? "redis://localhost:6379";
+  const prefix = process.env["REDIS_KEY_PREFIX"] || undefined;
+  const queues = ["embedding", "evaluation"].map(
+    (name) => new Queue(name, { connection: { url: redisUrl }, prefix }),
+  );
+  await Promise.all(queues.map((q) => q.obliterate({ force: true })));
+  await Promise.all(queues.map((q) => q.close()));
+  console.log(`[e2e] BullMQ queues flushed ✓`);
+
+  // 2. Ensure test-documents bucket exists (idempotent — safe to call on every run)
   if (SUPABASE_SERVICE_KEY) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const { error } = await supabase.storage.createBucket(STORAGE_BUCKET, {
@@ -51,7 +62,7 @@ export default async function globalSetup(): Promise<void> {
   try {
     await client.query(`SET search_path TO "${schema}", public`);
 
-    // 2. Truncate all business tables (CASCADE handles FK dependencies)
+    // 3. Truncate all business tables (CASCADE handles FK dependencies)
     await client.query(`
       TRUNCATE TABLE
         evaluations,
@@ -64,7 +75,7 @@ export default async function globalSetup(): Promise<void> {
       RESTART IDENTITY CASCADE
     `);
 
-    // 3. Seed baseline test data
+    // 4. Seed baseline test data
     await seedTestData(client);
 
     console.log(`[e2e] schema "${schema}" reset and seeded ✓`);

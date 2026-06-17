@@ -205,6 +205,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.5.1
         version: 4.7.0(vite@6.4.3(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.48.0)(tsx@4.22.4))
+      bullmq:
+        specifier: ^5.54.1
+        version: 5.78.1
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
