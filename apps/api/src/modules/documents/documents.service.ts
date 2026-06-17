@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PrismaService } from "../../common/prisma.service.js";
 import { SUPABASE_CLIENT } from "../../common/supabase.module.js";
 import { QUEUE_NAMES, type EmbeddingJobData } from "@rag-local/core";
+import { SettingsService } from "../settings/settings.service.js";
 
 const ALLOWED_EXTENSIONS = ["txt", "md"] as const;
 type AllowedExt = (typeof ALLOWED_EXTENSIONS)[number];
@@ -14,6 +15,7 @@ const MAX_SIZE_BYTES = Number(process.env["MAX_FILE_SIZE_MB"] ?? 10) * 1024 * 10
 export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     @InjectQueue(QUEUE_NAMES.EMBEDDING) private readonly embeddingQueue: Queue,
   ) {}
@@ -40,7 +42,7 @@ export class DocumentsService {
       throw new BadRequestException(`Storage upload failed: ${uploadError.message}`);
     }
 
-    const settings = await this.prisma.settings.findUnique({ where: { id: 1 } });
+    const settings = await this.settingsService.getSettings();
 
     const doc = await this.prisma.document.create({
       data: {
@@ -48,9 +50,9 @@ export class DocumentsService {
         fileType,
         storagePath,
         status: "pending",
-        chunkingStrategy: settings?.chunkingStrategy ?? "fixed",
-        chunkSize: settings?.chunkSize ?? 512,
-        chunkOverlap: settings?.chunkOverlap ?? 50,
+        chunkingStrategy: settings.chunkingStrategy,
+        chunkSize: settings.chunkSize,
+        chunkOverlap: settings.chunkOverlap,
       },
     });
 

@@ -2,33 +2,106 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import type { UpdateSettingsDto } from "./dto/update-settings.dto.js";
 
-const STATIC_FIELDS = ["chunkingStrategy", "chunkSize", "chunkOverlap"] as const;
+export interface AppSettings {
+  llmProvider: "openai" | "deepseek";
+  llmModel: string;
+  llmBaseUrl: string | null;
+  chunkingStrategy: "fixed" | "semantic";
+  chunkSize: number;
+  chunkOverlap: number;
+  hydeEnabled: boolean;
+  rerankingEnabled: boolean;
+  topK: number;
+  onlineEvaluationEnabled: boolean;
+  conversationHistoryWindow: number;
+}
+
+const DEFAULTS: Record<string, string> = {
+  llm_provider: "deepseek",
+  llm_model: "deepseek-chat",
+  llm_base_url: "https://api.deepseek.com",
+  chunking_strategy: "fixed",
+  chunk_size: "512",
+  chunk_overlap: "50",
+  hyde_enabled: "false",
+  reranking_enabled: "false",
+  top_k: "5",
+  online_evaluation_enabled: "false",
+  conversation_history_window: "50",
+};
+
+const STATIC_KEYS = ["chunking_strategy", "chunk_size", "chunk_overlap"] as const;
+
+function toBoolean(v: string): boolean {
+  return v === "true";
+}
 
 @Injectable()
 export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getSettings() {
-    const settings = await this.prisma.settings.findUnique({ where: { id: 1 } });
-    // Settings row is always present (seeded); upsert if missing
-    if (!settings) {
-      return this.prisma.settings.upsert({
-        where: { id: 1 },
-        create: {},
-        update: {},
-      });
-    }
-    return settings;
+  async getSettings(): Promise<AppSettings> {
+    const rows = await this.prisma.setting.findMany();
+    const kv: Record<string, string> = { ...DEFAULTS };
+    for (const row of rows) kv[row.key] = row.value;
+
+    return {
+      llmProvider: kv["llm_provider"] as "openai" | "deepseek",
+      llmModel: kv["llm_model"]!,
+      llmBaseUrl: kv["llm_base_url"] || null,
+      chunkingStrategy: kv["chunking_strategy"] as "fixed" | "semantic",
+      chunkSize: parseInt(kv["chunk_size"]!),
+      chunkOverlap: parseInt(kv["chunk_overlap"]!),
+      hydeEnabled: toBoolean(kv["hyde_enabled"]!),
+      rerankingEnabled: toBoolean(kv["reranking_enabled"]!),
+      topK: parseInt(kv["top_k"]!),
+      onlineEvaluationEnabled: toBoolean(kv["online_evaluation_enabled"]!),
+      conversationHistoryWindow: parseInt(kv["conversation_history_window"]!),
+    };
   }
 
-  async updateSettings(dto: UpdateSettingsDto) {
+  async updateSettings(dto: UpdateSettingsDto): Promise<AppSettings & { requiresReindex?: true }> {
     const before = await this.getSettings();
-    const updated = await this.prisma.settings.update({ where: { id: 1 }, data: dto });
 
-    const requiresReindex = STATIC_FIELDS.some(
-      (f) => dto[f] !== undefined && dto[f] !== (before as Record<string, unknown>)[f],
-    );
+    const dtoToKey: Partial<Record<keyof UpdateSettingsDto, string>> = {
+      llmProvider: "llm_provider",
+      llmModel: "llm_model",
+      llmBaseUrl: "llm_base_url",
+      chunkingStrategy: "chunking_strategy",
+      chunkSize: "chunk_size",
+      chunkOverlap: "chunk_overlap",
+      hydeEnabled: "hyde_enabled",
+      rerankingEnabled: "reranking_enabled",
+      topK: "top_k",
+      onlineEvaluationEnabled: "online_evaluation_enabled",
+      conversationHistoryWindow: "conversation_history_window",
+    };
 
-    return requiresReindex ? { ...updated, requiresReindex: true } : updated;
+    const upserts = Object.entries(dtoToKey)
+      .filter(([dtoField]) => dto[dtoField as keyof UpdateSettingsDto] !== undefined)
+      .map(([dtoField, key]) => {
+        const raw = dto[dtoField as keyof UpdateSettingsDto];
+        const value = String(raw);
+        return this.prisma.setting.upsert({
+          where: { key },
+          create: { key, value },
+          update: { value },
+        });
+      });
+
+    await Promise.all(upserts);
+
+    const after = await this.getSettings();
+
+    const requiresReindex =
+      STATIC_KEYS.some((k) => {
+        const dtoField = Object.entries(dtoToKey).find(([, dbKey]) => dbKey === k)?.[0];
+        return dtoField && dto[dtoField as keyof UpdateSettingsDto] !== undefined;
+      }) &&
+      (before.chunkingStrategy !== after.chunkingStrategy ||
+        before.chunkSize !== after.chunkSize ||
+        before.chunkOverlap !== after.chunkOverlap);
+
+    return requiresReindex ? { ...after, requiresReindex: true } : after;
   }
 }
