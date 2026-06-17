@@ -6,8 +6,8 @@
  */
 import { ServiceUnavailableException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { HealthController } from "./health.controller";
-import { HealthService } from "./health.service";
+import { HealthController } from "./health.controller.js";
+import { HealthService } from "./health.service.js";
 
 const mockHealthService = {
   checkQueue: vi.fn(),

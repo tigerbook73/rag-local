@@ -16,6 +16,7 @@ export default tseslint.config(
             "*.config.mjs",
             "apps/*/*.config.js",
             "apps/*/*.config.mjs",
+            "packages/db/prisma/*.ts",
           ],
         },
         tsconfigRootDir: import.meta.dirname,
