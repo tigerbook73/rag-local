@@ -4,6 +4,8 @@ import { Send, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { createConversation, streamChat, updateConversation } from "../lib/api.js";
 import { useConversationStore } from "../stores/conversation.store.js";
 import type { Message, RetrievedChunk } from "../types/api.js";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export function ChatPage() {
   const { id } = useParams<{ id?: string }>();
@@ -92,34 +94,34 @@ export function ChatPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+      <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b">
         <h1 className="font-medium">FAQ 问答</h1>
-        <button
-          onClick={handleNewChat}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
+        <Button variant="ghost" size="sm" onClick={handleNewChat}>
           <Plus className="h-4 w-4" /> 新建对话
-        </button>
+        </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && !streaming && (
-          <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {messages.length === 0 && !streaming ? (
+          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             在下方输入问题开始对话
           </div>
-        )}
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
-        ))}
-        {streaming && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-muted px-4 py-3 text-sm whitespace-pre-wrap">
-              {streamingContent}
-              <span className="inline-block w-1 h-4 bg-foreground animate-pulse ml-0.5 align-middle" />
-            </div>
+        ) : (
+          <div className="p-4 space-y-4">
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} />
+            ))}
+            {streaming && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-muted px-4 py-3 text-sm whitespace-pre-wrap">
+                  {streamingContent}
+                  <span className="inline-block w-1 h-4 bg-foreground animate-pulse ml-0.5 align-middle" />
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       {error && (
@@ -130,13 +132,13 @@ export function ChatPage() {
 
       <div className="border-t p-4">
         <div className="flex items-end gap-2 rounded-xl border bg-background px-3 py-2">
-          <textarea
+          <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="输入问题… (Enter 发送, Shift+Enter 换行)"
             rows={1}
-            className="flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground max-h-32 overflow-y-auto"
+            className="flex-1 resize-none border-0 shadow-none focus-visible:ring-0 p-0 text-sm max-h-32 overflow-y-auto"
             onInput={(e) => {
               const el = e.currentTarget;
               el.style.height = "auto";
@@ -144,13 +146,13 @@ export function ChatPage() {
             }}
             disabled={streaming}
           />
-          <button
+          <Button
+            size="icon-sm"
             onClick={() => void handleSend()}
             disabled={!input.trim() || streaming}
-            className="flex-shrink-0 rounded-lg p-2 bg-primary text-primary-foreground disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>
