@@ -6,7 +6,8 @@ process.env["DATABASE_URL"] ??= "postgresql://localhost/placeholder";
 process.env["REDIS_URL"] ??= "redis://localhost";
 process.env["SUPABASE_URL"] ??= "https://placeholder.supabase.co";
 process.env["SUPABASE_SERVICE_KEY"] ??= "placeholder";
-process.env["LLM_API_KEY"] ??= "placeholder";
+process.env["OPENAI_API_KEY"] ??= "placeholder";
+process.env["DEEPSEEK_API_KEY"] ??= "placeholder";
 
 import fs from "node:fs";
 import { NestFactory } from "@nestjs/core";
