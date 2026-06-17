@@ -1,17 +1,9 @@
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, Min } from "class-validator";
 
 export class UpdateSettingsDto {
   @IsOptional()
   @IsIn(["openai", "deepseek"])
   llmProvider?: "openai" | "deepseek";
-
-  @IsOptional()
-  @IsString()
-  llmModel?: string;
-
-  @IsOptional()
-  @IsString()
-  llmBaseUrl?: string;
 
   @IsOptional()
   @IsIn(["fixed", "semantic"])

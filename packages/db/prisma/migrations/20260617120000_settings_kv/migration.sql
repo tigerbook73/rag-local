@@ -15,8 +15,6 @@ CREATE TABLE "settings" (
 -- Seed default values
 INSERT INTO "settings" ("key", "value") VALUES
     ('llm_provider',               'deepseek'),
-    ('llm_model',                  'deepseek-chat'),
-    ('llm_base_url',               'https://api.deepseek.com'),
     ('chunking_strategy',          'fixed'),
     ('chunk_size',                 '512'),
     ('chunk_overlap',              '50'),

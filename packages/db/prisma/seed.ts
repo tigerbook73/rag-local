@@ -4,8 +4,6 @@ const prisma = new PrismaClient();
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   llm_provider: "deepseek",
-  llm_model: "deepseek-chat",
-  llm_base_url: "https://api.deepseek.com",
   chunking_strategy: "fixed",
   chunk_size: "512",
   chunk_overlap: "50",

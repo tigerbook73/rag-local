@@ -16,10 +16,13 @@ export interface AppSettings {
   conversationHistoryWindow: number;
 }
 
+const PROVIDER_CONFIG: Record<"openai" | "deepseek", { model: string; baseUrl: string | null }> = {
+  deepseek: { model: "deepseek-chat", baseUrl: "https://api.deepseek.com" },
+  openai: { model: "gpt-4o", baseUrl: null },
+};
+
 const DEFAULTS: Record<string, string> = {
   llm_provider: "deepseek",
-  llm_model: "deepseek-chat",
-  llm_base_url: "https://api.deepseek.com",
   chunking_strategy: "fixed",
   chunk_size: "512",
   chunk_overlap: "50",
@@ -45,10 +48,13 @@ export class SettingsService {
     const kv: Record<string, string> = { ...DEFAULTS };
     for (const row of rows) kv[row.key] = row.value;
 
+    const llmProvider = kv["llm_provider"] as "openai" | "deepseek";
+    const { model: llmModel, baseUrl: llmBaseUrl } = PROVIDER_CONFIG[llmProvider];
+
     return {
-      llmProvider: kv["llm_provider"] as "openai" | "deepseek",
-      llmModel: kv["llm_model"]!,
-      llmBaseUrl: kv["llm_base_url"] || null,
+      llmProvider,
+      llmModel,
+      llmBaseUrl,
       chunkingStrategy: kv["chunking_strategy"] as "fixed" | "semantic",
       chunkSize: parseInt(kv["chunk_size"]!),
       chunkOverlap: parseInt(kv["chunk_overlap"]!),
@@ -65,8 +71,6 @@ export class SettingsService {
 
     const dtoToKey: Partial<Record<keyof UpdateSettingsDto, string>> = {
       llmProvider: "llm_provider",
-      llmModel: "llm_model",
-      llmBaseUrl: "llm_base_url",
       chunkingStrategy: "chunking_strategy",
       chunkSize: "chunk_size",
       chunkOverlap: "chunk_overlap",

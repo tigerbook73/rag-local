@@ -61,7 +61,7 @@ export interface Document {
 export interface Settings {
   llmProvider: "openai" | "deepseek";
   llmModel: string;
-  llmBaseUrl?: string;
+  llmBaseUrl: string | null;
   chunkingStrategy: "fixed" | "semantic";
   chunkSize: number;
   chunkOverlap: number;
