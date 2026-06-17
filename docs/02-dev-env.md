@@ -10,9 +10,14 @@ rag-faq/
 ├── package.json                  # pnpm root workspace
 ├── .env.example                  # 所有环境变量模板，提交到版本控制
 ├── .env                          # 实际配置，不提交（gitignore）
-├── .model-cache/                 # BGE-M3 模型本地缓存，不提交（gitignore）
 ├── docker-compose.yml            # 生产/演示：全服务编排
-├── docker-compose.dev.yml        # 开发：仅启动 Redis
+├── docker-compose.dev.yml        # 开发：Redis + embedding sidecar
+│
+├── services/
+│   └── embedding/                # Python FastAPI embedding sidecar（BGE-M3 on GPU）
+│       ├── main.py
+│       ├── requirements.txt
+│       └── Dockerfile
 │
 ├── apps/
 │   ├── web/                      # React 前端（Vite）
@@ -53,6 +58,7 @@ rag-faq/
 │   ├── core/                     # 共享核心逻辑
 │   │   ├── src/
 │   │   │   ├── chunking/
+│   │   │   ├── config/           # parseRedisUrl 等共享工具
 │   │   │   ├── embedding/
 │   │   │   ├── llm/
 │   │   │   ├── retrieval/
@@ -87,9 +93,11 @@ rag-faq/
 # 1. Supabase Local（管理自己的内部容器组，不纳入项目 docker-compose）
 supabase start
 
-# 2. Redis（通过项目 docker-compose.dev.yml 启动）
+# 2. Redis + Embedding Sidecar（BGE-M3 on GPU）
 docker compose -f docker-compose.dev.yml up -d
 ```
+
+`docker-compose.dev.yml` 包含两个服务：`redis`（BullMQ）和 `embedding`（Python FastAPI，端口 8000）。首次启动 embedding 服务时会从 HuggingFace Hub 下载 BGE-M3 模型（~1.5GB），缓存至命名卷 `model-cache`，后续重启秒级完成。
 
 Supabase 启动后会输出各服务地址，将 DB URL、API URL、Service Key 填入 `.env`。
 
@@ -137,33 +145,39 @@ pnpm gen:types
 
 ---
 
-## 2.4 BGE-M3 模型管理
+## 2.4 BGE-M3 模型管理（Python Embedding Sidecar）
 
-| 环境                | 策略                                                                                            |
-| ------------------- | ----------------------------------------------------------------------------------------------- |
-| 开发（宿主机）      | Worker 首次运行时从 HuggingFace Hub 自动下载，缓存至项目根 `.model-cache/`（加入 `.gitignore`） |
-| 生产/演示（Docker） | Worker 容器通过命名卷 `model-cache` 持久化；首次启动自动下载（~570MB），容器重建后缓存保留      |
+Embedding 由独立的 Python FastAPI 服务（`services/embedding/`）负责，运行 BGE-M3（`BAAI/bge-m3`，1024 维）on PyTorch + CUDA。Node.js 进程（API、Worker）不再直接加载模型，而是通过 HTTP 调用 sidecar。
+
+| 环境                | 策略                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 开发（Docker）      | `docker compose -f docker-compose.dev.yml up embedding`；首次启动下载 BGE-M3（~1.5GB），缓存至命名卷 `model-cache` |
+| 生产/演示（Docker） | 同 docker-compose.dev.yml 结构，GPU reservation 通过 `deploy.resources.reservations.devices` 声明                  |
 
 不将模型预打包进 Docker 镜像，避免镜像体积膨胀。
 
 ```yaml
-# docker-compose.yml 中 Worker 相关配置（片段）
+# docker-compose.dev.yml — embedding sidecar 配置（片段）
 services:
-  worker:
+  embedding:
+    build: ./services/embedding
+    ports: ["8000:8000"]
     volumes:
-      - model-cache:/app/.model-cache
+      - model-cache:/root/.cache/huggingface
     environment:
-      - HF_HOME=/app/.model-cache
-
+      - HF_HOME=/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 volumes:
   model-cache:
 ```
 
-开发环境通过 `.env` 设置相同路径：
-
-```
-HF_HOME=./.model-cache
-```
+健康检查接口：`GET http://localhost:8000/health` → `{ "status": "ok", "model": "BAAI/bge-m3", "device": "cuda:0" }`
 
 ---
 
@@ -171,19 +185,18 @@ HF_HOME=./.model-cache
 
 所有配置通过 `.env` 文件管理，提交 `.env.example` 作为模板。
 
-| 变量                   | 示例值                                                    | 说明                                      |
-| ---------------------- | --------------------------------------------------------- | ----------------------------------------- |
-| `LLM_API_KEY`          | `sk-...`                                                  | LLM provider API Key                      |
-| `LLM_BASE_URL`         | `https://api.deepseek.com`                                | LLM base URL，切换 provider 只改这里      |
-| `LLM_MODEL`            | `deepseek-chat`                                           | 默认模型名                                |
-| `REDIS_URL`            | `redis://localhost:6379`                                  | BullMQ 连接                               |
-| `SUPABASE_URL`         | `http://localhost:54321`                                  | Supabase Local API URL                    |
-| `SUPABASE_SERVICE_KEY` | `eyJ...`                                                  | service_role key，Worker 直接操作 DB 需要 |
-| `DATABASE_URL`         | `postgresql://postgres:postgres@localhost:54322/postgres` | Prisma 连接字符串                         |
-| `WORKER_CONCURRENCY`   | `2`                                                       | 同时处理的 Embedding Job 数量             |
-| `MAX_FILE_SIZE_MB`     | `10`                                                      | 单文件最大体积限制                        |
-| `JOB_RETRY_COUNT`      | `3`                                                       | Job 最大自动重试次数                      |
-| `HF_HOME`              | `./.model-cache`                                          | HuggingFace 模型缓存目录                  |
+| 变量                    | 示例值                                                    | 说明                                              |
+| ----------------------- | --------------------------------------------------------- | ------------------------------------------------- |
+| `DEEPSEEK_API_KEY`      | `sk-...`                                                  | DeepSeek API Key                                  |
+| `OPENAI_API_KEY`        | `sk-...`                                                  | OpenAI API Key（二选一）                          |
+| `REDIS_URL`             | `redis://localhost:6379`                                  | BullMQ 连接                                       |
+| `SUPABASE_URL`          | `http://localhost:54321`                                  | Supabase Local API URL                            |
+| `SUPABASE_SERVICE_KEY`  | `eyJ...`                                                  | service_role key，Worker 直接操作 DB 需要         |
+| `DATABASE_URL`          | `postgresql://postgres:postgres@localhost:54322/postgres` | Prisma 连接字符串                                 |
+| `WORKER_CONCURRENCY`    | `2`                                                       | 同时处理的 Embedding Job 数量                     |
+| `MAX_FILE_SIZE_MB`      | `10`                                                      | 单文件最大体积限制                                |
+| `JOB_RETRY_COUNT`       | `3`                                                       | Job 最大自动重试次数                              |
+| `EMBEDDING_SERVICE_URL` | `http://localhost:8000`                                   | Python embedding sidecar 地址（替代原 `HF_HOME`） |
 
 ### 配置优先级
 

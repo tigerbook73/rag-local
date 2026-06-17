@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## packages/core — 共享核心逻辑
 
-`api` 和 `worker` 共同引用的纯逻辑包。不依赖 NestJS，只依赖 `@huggingface/transformers` 和 `openai`。
+`api` 和 `worker` 共同引用的纯逻辑包。不依赖 NestJS，主要依赖 `openai`（LLM）和 Node.js 原生 `fetch`（Embedding HTTP 调用）。
 
 ### 命令
 
@@ -19,9 +19,9 @@ pnpm lint
 
 **`EmbeddingService`（`src/embedding/embedding.service.ts`）**
 
-- 单例，`init()` 加载 BGE-M3 ONNX 模型（`Xenova/bge-m3`，`dtype: "fp32"`）
-- `embed()` 使用 `pooling: "cls", normalize: true`
-- 模型路径：`env.cacheDir = process.env["HF_HOME"] ?? "./.model-cache"`
+- HTTP 客户端，调用 Python embedding sidecar（`EMBEDDING_SERVICE_URL`，默认 `http://localhost:8000`）
+- **`init()` 是同步方法**，仅读取环境变量，无模型加载开销
+- `embed(text)` → `POST /embed`；`embedBatch(texts)` → 单次 `POST /embed/batch`（非 N 次并行）
 - **`init()` 必须在使用 `embed()`/`embedBatch()` 前调用**，否则抛出异常
 
 **`LLMService`（`src/llm/llm.service.ts`）**
@@ -47,6 +47,10 @@ pnpm lint
 
 - `EmbeddingJobData`、`EvaluationJobData` — Job payload 类型
 - `QUEUE_NAMES` — 常量，api 和 worker 共用，避免字符串硬编码
+
+**共享工具（`src/config/redis.ts`）**
+
+- `parseRedisUrl(url?)` — 将 `REDIS_URL` 解析为 `{ host, port }` BullMQ connection 对象；api、worker、health.service 三处共用，默认 fallback `redis://localhost:6379`
 
 ### 发布格式
 
