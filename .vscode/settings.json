@@ -11,5 +11,16 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "eslint.useFlatConfig": true,
-  "json.schemaDownload.enable": true
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "json.schemaDownload.enable": true,
+  "sqltools.connections": [
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "localhost",
+      "driver": "PostgreSQL",
+      "name": "supabase",
+      "connectString": "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+    }
+  ]
 }
