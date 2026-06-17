@@ -21,7 +21,9 @@ export class DocumentsService {
   ) {}
 
   async upload(file: Express.Multer.File) {
-    const ext = file.originalname.split(".").pop()?.toLowerCase();
+    // busboy decodes the Content-Disposition filename as Latin-1; re-encode to recover UTF-8
+    const originalname = Buffer.from(file.originalname, "latin1").toString("utf8");
+    const ext = originalname.split(".").pop()?.toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext as AllowedExt)) {
       throw new BadRequestException("Only .txt and .md files are supported");
     }
@@ -32,7 +34,7 @@ export class DocumentsService {
     }
 
     const fileType = ext as AllowedExt;
-    const storagePath = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const storagePath = `${Date.now()}-${originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
 
     const { error: uploadError } = await this.supabase.storage
       .from("documents")
@@ -46,7 +48,7 @@ export class DocumentsService {
 
     const doc = await this.prisma.document.create({
       data: {
-        filename: file.originalname,
+        filename: originalname,
         fileType,
         storagePath,
         status: "pending",
