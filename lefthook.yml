@@ -1,5 +1,12 @@
 pre-commit:
   commands:
+    no-commit-to-main:
+      run: |
+        branch=$(git symbolic-ref --short HEAD)
+        if [ "$branch" = "main" ]; then
+          echo "Direct commits to main branch are not allowed."
+          exit 1
+        fi
     lint:
       glob: "*.{ts,tsx,js}"
       run: pnpm lint
