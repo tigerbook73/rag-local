@@ -122,6 +122,11 @@ public = false
 file_size_limit = "10MiB"
 allowed_mime_types = ["text/plain", "text/markdown", "text/x-markdown"]
 
+[storage.buckets.test-documents]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["text/plain", "text/markdown", "text/x-markdown"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = false

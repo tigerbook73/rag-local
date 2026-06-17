@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { BullModule } from "@nestjs/bullmq";
 import { LoggerModule } from "nestjs-pino";
-import { parseRedisUrl } from "@rag-local/core";
+import { parseRedisUrl, getRedisKeyPrefix } from "@rag-local/core";
 import { PrismaModule } from "./common/prisma.module.js";
 import { SupabaseModule } from "./common/supabase.module.js";
 import { HealthController } from "./modules/health/health.controller.js";
@@ -21,7 +21,7 @@ import { SettingsModule } from "./modules/settings/settings.module.js";
             : undefined,
       },
     }),
-    BullModule.forRoot({ connection: parseRedisUrl() }),
+    BullModule.forRoot({ connection: parseRedisUrl(), prefix: getRedisKeyPrefix() || undefined }),
     PrismaModule,
     SupabaseModule,
     SettingsModule,

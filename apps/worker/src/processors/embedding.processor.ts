@@ -11,6 +11,8 @@ import {
   QUEUE_NAMES,
 } from "@rag-local/core";
 
+const STORAGE_BUCKET = process.env["STORAGE_BUCKET"] ?? "documents";
+
 @Processor(QUEUE_NAMES.EMBEDDING, {
   concurrency: Number(process.env["WORKER_CONCURRENCY"] ?? 2),
 })
@@ -47,7 +49,9 @@ export class EmbeddingProcessor extends WorkerHost {
 
     try {
       // Download file from Supabase Storage
-      const { data, error } = await this.supabase.storage.from("documents").download(storagePath);
+      const { data, error } = await this.supabase.storage
+        .from(STORAGE_BUCKET)
+        .download(storagePath);
 
       if (error || !data) {
         throw new Error(`Storage download failed: ${error?.message ?? "unknown"}`);

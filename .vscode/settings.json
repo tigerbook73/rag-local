@@ -19,7 +19,15 @@
       "previewLimit": 50,
       "server": "localhost",
       "driver": "PostgreSQL",
-      "name": "supabase",
+      "name": "RAG Local - Test",
+      "connectString": "postgresql://postgres:postgres@127.0.0.1:54322/postgres?schema=test"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "localhost",
+      "driver": "PostgreSQL",
+      "name": "RAG Local - Public",
       "connectString": "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
     }
   ]

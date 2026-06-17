@@ -14,6 +14,7 @@
     "db:generate": "pnpm --filter @rag-local/db db:generate",
     "db:migrate": "pnpm --filter @rag-local/db db:migrate",
     "db:seed": "pnpm --filter @rag-local/db db:seed",
+    "db:push:test": "pnpm --filter @rag-local/db db:push:test",
     "gen:spec": "pnpm --filter @rag-local/api gen:spec",
     "gen:types": "pnpm gen:spec && openapi-typescript openapi.json -o apps/web/src/types/api.ts",
     "preview": "pnpm --filter @rag-local/web preview",
