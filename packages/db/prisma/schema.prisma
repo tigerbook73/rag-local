@@ -117,7 +117,7 @@ model Chunk {
   id         String                      @id @default(uuid()) @db.Uuid
   documentId String                      @map("document_id") @db.Uuid
   content    String
-  embedding  Unsupported("extensions.vector(1024)")
+  embedding  Unsupported("public.vector(1024)")
   chunkIndex Int                         @map("chunk_index")
   metadata   Json?
   createdAt  DateTime                    @default(now()) @map("created_at") @db.Timestamptz
