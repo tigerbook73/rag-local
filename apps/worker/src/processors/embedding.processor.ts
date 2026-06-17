@@ -24,7 +24,7 @@ export class EmbeddingProcessor extends WorkerHost {
   private readonly embeddingService = new EmbeddingService();
 
   onModuleInit() {
-    this.embeddingService.init();
+    void this.embeddingService.init();
     this.logger.log(
       `Embedding service connected: ${process.env["EMBEDDING_SERVICE_URL"] ?? "http://localhost:8000"}`,
     );
@@ -73,20 +73,30 @@ export class EmbeddingProcessor extends WorkerHost {
         documentId,
       );
 
-      // Embed and insert each chunk
-      for (const chunk of chunks) {
-        const textToEmbed = fileType === "md" ? stripMarkdown(chunk.content) : chunk.content;
-        const embedding = await this.embeddingService.embed(textToEmbed);
-        const embStr = `[${embedding.map((n) => n.toFixed(8)).join(",")}]`;
+      // Embed and insert chunks in batches of EMBEDDING_BATCH_SIZE
+      const BATCH_SIZE = 32;
+      const textsToEmbed = chunks.map((chunk) =>
+        fileType === "md" ? stripMarkdown(chunk.content) : chunk.content,
+      );
 
-        await this.prisma.$executeRawUnsafe(
-          `INSERT INTO chunks (id, document_id, content, embedding, chunk_index)
-           VALUES (gen_random_uuid(), $1::uuid, $2, $3::vector, $4)`,
-          documentId,
-          chunk.content,
-          embStr,
-          chunk.index,
-        );
+      for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+        const batchChunks = chunks.slice(i, i + BATCH_SIZE);
+        const batchTexts = textsToEmbed.slice(i, i + BATCH_SIZE);
+        const embeddings = await this.embeddingService.embedBatch(batchTexts);
+
+        for (let j = 0; j < batchChunks.length; j++) {
+          const chunk = batchChunks[j]!;
+          const embStr = `[${embeddings[j]!.map((n) => n.toFixed(8)).join(",")}]`;
+
+          await this.prisma.$executeRawUnsafe(
+            `INSERT INTO chunks (id, document_id, content, embedding, chunk_index)
+             VALUES (gen_random_uuid(), $1::uuid, $2, $3::vector, $4)`,
+            documentId,
+            chunk.content,
+            embStr,
+            chunk.index,
+          );
+        }
       }
 
       await this.prisma.document.update({

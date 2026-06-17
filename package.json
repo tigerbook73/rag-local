@@ -48,7 +48,6 @@
       "esbuild",
       "lefthook",
       "msgpackr-extract",
-      "onnxruntime-node",
       "prisma",
       "sharp"
     ]

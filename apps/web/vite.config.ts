@@ -14,4 +14,5 @@ export default defineConfig({
       "/api": "http://localhost:3001",
     },
   },
+  clearScreen: false,
 });

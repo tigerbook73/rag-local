@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nest start --watch --exec 'node --env-file=../../.env'",
+    "dev": "nest start --watch --preserveWatchOutput --exec 'node --env-file=../../.env'",
     "build": "nest build",
     "test": "vitest run",
     "test:watch": "vitest",
