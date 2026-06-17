@@ -10,6 +10,7 @@ import { SettingsService } from "../settings/settings.service.js";
 const ALLOWED_EXTENSIONS = ["txt", "md"] as const;
 type AllowedExt = (typeof ALLOWED_EXTENSIONS)[number];
 const MAX_SIZE_BYTES = Number(process.env["MAX_FILE_SIZE_MB"] ?? 10) * 1024 * 1024;
+const STORAGE_BUCKET = process.env["STORAGE_BUCKET"] ?? "documents";
 
 @Injectable()
 export class DocumentsService {
@@ -37,7 +38,7 @@ export class DocumentsService {
     const storagePath = `${Date.now()}-${originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
 
     const { error: uploadError } = await this.supabase.storage
-      .from("documents")
+      .from(STORAGE_BUCKET)
       .upload(storagePath, file.buffer, { contentType: file.mimetype });
 
     if (uploadError) {
@@ -92,7 +93,7 @@ export class DocumentsService {
     const doc = await this.prisma.document.findUnique({ where: { id } });
     if (!doc) throw new NotFoundException("Document not found");
 
-    await this.supabase.storage.from("documents").remove([doc.storagePath]);
+    await this.supabase.storage.from(STORAGE_BUCKET).remove([doc.storagePath]);
     await this.prisma.document.delete({ where: { id } });
   }
 

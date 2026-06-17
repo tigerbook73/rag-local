@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "nest start --watch --preserveWatchOutput --exec 'node --env-file=../../.env'",
+    "dev:test": "nest start --watch --preserveWatchOutput --exec 'node --env-file=../../.env.test'",
     "debug": "nest start --watch --exec 'node --inspect --env-file=../../.env'",
     "build": "nest build",
     "test": "vitest run",
