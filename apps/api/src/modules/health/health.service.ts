@@ -1,15 +1,15 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Injectable, OnApplicationBootstrap, OnModuleDestroy } from "@nestjs/common";
 import { Queue, QueueEvents } from "bullmq";
 import { prisma } from "@rag-local/db";
 
 const HEALTH_QUEUE = "health-check";
 
 @Injectable()
-export class HealthService implements OnModuleInit, OnModuleDestroy {
+export class HealthService implements OnApplicationBootstrap, OnModuleDestroy {
   private queue!: Queue;
   private queueEvents!: QueueEvents;
 
-  onModuleInit(): void {
+  onApplicationBootstrap(): void {
     const { hostname: host, port: portStr } = new URL(
       process.env["REDIS_URL"] ?? "redis://localhost:6379",
     );
@@ -19,8 +19,8 @@ export class HealthService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.queueEvents.close();
-    await this.queue.close();
+    await this.queueEvents?.close();
+    await this.queue?.close();
   }
 
   async checkQueue(): Promise<{ status: string }> {
