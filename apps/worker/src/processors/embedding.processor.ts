@@ -22,13 +22,12 @@ export class EmbeddingProcessor extends WorkerHost {
     process.env["SUPABASE_SERVICE_KEY"]!,
   );
   private readonly embeddingService = new EmbeddingService();
-  private embeddingReady = false;
 
-  async onModuleInit() {
-    this.logger.log("Loading BGE-M3 embedding model…");
-    await this.embeddingService.init();
-    this.embeddingReady = true;
-    this.logger.log("BGE-M3 model ready");
+  onModuleInit() {
+    this.embeddingService.init();
+    this.logger.log(
+      `Embedding service connected: ${process.env["EMBEDDING_SERVICE_URL"] ?? "http://localhost:8000"}`,
+    );
   }
 
   async onModuleDestroy() {

@@ -14,7 +14,7 @@ export class MessagesBootstrapService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    await this.embedding.init();
+    this.embedding.init();
 
     const { llmProvider, llmModel, llmBaseUrl } = await this.settings.getSettings();
     this.llm.init({

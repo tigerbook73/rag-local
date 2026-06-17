@@ -1,4 +1,4 @@
-# Development: only Redis (Supabase managed via `supabase start`)
+# Development: Redis + embedding sidecar (Supabase managed via `supabase start`)
 services:
   redis:
     image: redis:7-alpine
@@ -12,5 +12,30 @@ services:
       timeout: 3s
       retries: 5
 
+  embedding:
+    build:
+      context: ./services/embedding
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - model-cache:/root/.cache/huggingface
+    environment:
+      - HF_HOME=/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
 volumes:
   redis-dev-data:
+  model-cache:
