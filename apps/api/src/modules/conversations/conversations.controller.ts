@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Logger,
+  Param,
+  Patch,
+  Post,
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { ConversationsService } from "./conversations.service.js";
 import { UpdateConversationDto } from "./dto/update-conversation.dto.js";
@@ -6,11 +16,16 @@ import { UpdateConversationDto } from "./dto/update-conversation.dto.js";
 @ApiTags("conversations")
 @Controller("conversations")
 export class ConversationsController {
+  private readonly logger = new Logger(ConversationsController.name);
+
   constructor(private readonly conversationsService: ConversationsService) {}
 
   @Post()
-  create() {
-    return this.conversationsService.create();
+  async create() {
+    this.logger.log(`Creating conversation`);
+    const result = await this.conversationsService.create();
+    this.logger.log(`Created conversation ${result.id}`);
+    return result;
   }
 
   @Get()
@@ -19,13 +34,16 @@ export class ConversationsController {
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() dto: UpdateConversationDto) {
-    return this.conversationsService.update(id, dto);
+  async update(@Param("id") id: string, @Body() dto: UpdateConversationDto) {
+    const result = await this.conversationsService.update(id, dto);
+    this.logger.log(`Updated conversation ${id}`);
+    return result;
   }
 
   @Delete(":id")
   @HttpCode(204)
-  remove(@Param("id") id: string) {
-    return this.conversationsService.remove(id);
+  async remove(@Param("id") id: string) {
+    await this.conversationsService.remove(id);
+    this.logger.log(`Deleted conversation ${id}`);
   }
 }
