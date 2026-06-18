@@ -45,9 +45,9 @@ export class UpdateSettingsDto {
   @IsBoolean()
   onlineEvaluationEnabled?: boolean;
 
-  @ApiPropertyOptional({ minimum: 1 })
+  @ApiPropertyOptional({ minimum: 0 })
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @Min(0)
   conversationHistoryWindow?: number;
 }

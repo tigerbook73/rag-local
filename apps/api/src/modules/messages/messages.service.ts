@@ -70,6 +70,8 @@ export class MessagesService {
       // Retrieve relevant chunks
       const { chunks, retrievalMs } = await this.retrievalService.retrieve(dto.content, {
         topK: settings.topK,
+        hyde: settings.hydeEnabled,
+        reranking: settings.rerankingEnabled,
       });
 
       // Build prompt

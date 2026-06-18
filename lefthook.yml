@@ -12,7 +12,7 @@ pre-commit:
       run: pnpm exec eslint {staged_files}
     format:
       glob: "*.{ts,tsx,js,json,md,yaml,yml}"
-      run: pnpm exec prettier --write {staged_files}
+      run: pnpm exec prettier {staged_files}
     # aisk-test-review-gate-check-reviewed-by-commit-marker:
     #   run: node .aisk/test-review-gate/scripts/check-reviewed-by-commit-marker.cjs {staged_files}
     # aisk-test-review-gate-check-test-cases-match-it:
@@ -21,7 +21,7 @@ pre-commit:
 pre-push:
   commands:
     verify:
-      run: pnpm verify
+      run: "pnpm verify"
 
 commit-msg:
   commands:

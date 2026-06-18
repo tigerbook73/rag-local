@@ -51,7 +51,7 @@ describe("SettingsService — getSettings()", () => {
     expect(settings.rerankingEnabled).toBe(false);
     expect(settings.topK).toBe(5);
     expect(settings.onlineEvaluationEnabled).toBe(false);
-    expect(settings.conversationHistoryWindow).toBe(50);
+    expect(settings.conversationHistoryWindow).toBe(0);
   });
 
   it("DB rows override default values", async () => {

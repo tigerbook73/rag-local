@@ -3,10 +3,14 @@ import type {
   ConversationCreateResponse,
   Document,
   Message,
+  Settings,
   SseDeltaEvent,
   SseDoneEvent,
   SseErrorEvent,
 } from "../types/index.js";
+import type { components } from "../types/generated/api.js";
+
+type UpdateSettingsBody = components["schemas"]["UpdateSettingsDto"];
 
 const BASE = "/api/v1";
 
@@ -18,6 +22,22 @@ async function json<T>(res: Response): Promise<T> {
     throw new Error(body.error?.message ?? res.statusText);
   }
   return res.json() as Promise<T>;
+}
+
+// ── Settings ─────────────────────────────────────────────────────────
+
+export async function getSettings(): Promise<Settings> {
+  const res = await fetch(`${BASE}/settings`);
+  return json(res);
+}
+
+export async function updateSettings(body: UpdateSettingsBody): Promise<Settings> {
+  const res = await fetch(`${BASE}/settings`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return json(res);
 }
 
 // ── Documents ────────────────────────────────────────────────────────

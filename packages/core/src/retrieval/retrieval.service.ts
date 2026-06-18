@@ -1,4 +1,5 @@
 import type { EmbeddingService } from "../embedding/embedding.service.js";
+import type { LLMService } from "../llm/llm.service.js";
 import type { RetrievedChunk } from "../types/retrieval.js";
 
 interface PrismaLike {
@@ -16,6 +17,8 @@ interface ChunkRow {
 
 export interface RetrievalOptions {
   topK: number;
+  hyde: boolean;
+  reranking: boolean;
 }
 
 export interface RetrievalResult {
@@ -23,19 +26,25 @@ export interface RetrievalResult {
   retrievalMs: number;
 }
 
+const HYDE_PROMPT = `Generate a concise hypothetical document that would directly answer the following question. Write only the answer text, no preamble.
+
+Question: `;
+
 export class RetrievalService {
   constructor(
     private readonly embeddingService: EmbeddingService,
     private readonly prisma: PrismaLike,
+    private readonly llmService?: LLMService,
   ) {}
 
   async retrieve(query: string, options: RetrievalOptions): Promise<RetrievalResult> {
     const start = Date.now();
-    const embedding = await this.embeddingService.embed(query);
-    const rows = await this.vectorSearch(embedding, options.topK);
-    const retrievalMs = Date.now() - start;
 
-    const chunks: RetrievedChunk[] = rows.map((r) => ({
+    const embedText = options.hyde ? await this.generateHydeText(query) : query;
+    const embedding = await this.embeddingService.embed(embedText);
+    const rows = await this.vectorSearch(embedding, options.topK);
+
+    let chunks: RetrievedChunk[] = rows.map((r) => ({
       chunkId: r.id,
       documentId: r.document_id,
       documentName: r.filename,
@@ -43,7 +52,35 @@ export class RetrievalService {
       similarityScore: Number(r.similarity_score),
     }));
 
+    if (options.reranking && chunks.length > 0) {
+      chunks = await this.rerank(query, chunks);
+    }
+
+    const retrievalMs = Date.now() - start;
     return { chunks, retrievalMs };
+  }
+
+  private async generateHydeText(query: string): Promise<string> {
+    if (!this.llmService) return query;
+    try {
+      return await this.llmService.chat([{ role: "user", content: `${HYDE_PROMPT}${query}` }]);
+    } catch {
+      // Fall back to original query if LLM call fails
+      return query;
+    }
+  }
+
+  private async rerank(query: string, chunks: RetrievedChunk[]): Promise<RetrievedChunk[]> {
+    try {
+      const passages = chunks.map((c) => c.content);
+      const scores = await this.embeddingService.rerank(query, passages);
+      return chunks
+        .map((chunk, i) => ({ ...chunk, rerankScore: scores[i] }))
+        .sort((a, b) => (b.rerankScore ?? 0) - (a.rerankScore ?? 0));
+    } catch {
+      // Fall back to original order if reranking fails
+      return chunks;
+    }
   }
 
   private async vectorSearch(embedding: number[], topK: number): Promise<ChunkRow[]> {
