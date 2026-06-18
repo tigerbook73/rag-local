@@ -1,165 +1,170 @@
+import createClient from "openapi-fetch";
+import type { paths, components } from "../types/generated/api.js";
 import type {
   Conversation,
-  ConversationCreateResponse,
   Document,
   Message,
   PromptTemplate,
+  RetrievedChunk,
   Settings,
   SseDeltaEvent,
   SseDoneEvent,
   SseErrorEvent,
 } from "../types/index.js";
-import type { components } from "../types/generated/api.js";
 
-type UpdateSettingsBody = components["schemas"]["UpdateSettingsDto"];
-type CreatePromptTemplateBody = components["schemas"]["CreatePromptTemplateDto"];
-type UpdatePromptTemplateBody = components["schemas"]["UpdatePromptTemplateDto"];
+const apiClient = createClient<paths>({ baseUrl: "" });
 
-const BASE = "/api/v1";
+type ApiErrorBody = { error?: { message?: string } };
 
-async function json<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const body = await (res.json() as Promise<{ error?: { message?: string } }>).catch(
-      (): { error?: { message?: string } } => ({}),
-    );
-    throw new Error(body.error?.message ?? res.statusText);
-  }
-  return res.json() as Promise<T>;
+function throwOnError(error: unknown): never {
+  throw new Error((error as ApiErrorBody)?.error?.message ?? "Request failed");
 }
 
 // ── Settings ─────────────────────────────────────────────────────────
 
 export async function getSettings(): Promise<Settings> {
-  const res = await fetch(`${BASE}/settings`);
-  return json(res);
+  const { data, error } = await apiClient.GET("/api/v1/settings");
+  if (error) throwOnError(error);
+  return data;
 }
 
-export async function updateSettings(body: UpdateSettingsBody): Promise<Settings> {
-  const res = await fetch(`${BASE}/settings`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return json(res);
+export async function updateSettings(
+  body: components["schemas"]["UpdateSettingsDto"],
+): Promise<Settings> {
+  const { data, error } = await apiClient.PATCH("/api/v1/settings", { body });
+  if (error) throwOnError(error);
+  return data;
 }
 
 // ── Prompt Templates ─────────────────────────────────────────────────
 
 export async function listPromptTemplates(): Promise<{ data: PromptTemplate[] }> {
-  const res = await fetch(`${BASE}/prompt-templates`);
-  return json(res);
+  const { data, error } = await apiClient.GET("/api/v1/prompt-templates");
+  if (error) throwOnError(error);
+  return data;
 }
 
 export async function createPromptTemplate(
-  body: CreatePromptTemplateBody,
+  body: components["schemas"]["CreatePromptTemplateDto"],
 ): Promise<PromptTemplate> {
-  const res = await fetch(`${BASE}/prompt-templates`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return json(res);
+  const { data, error } = await apiClient.POST("/api/v1/prompt-templates", { body });
+  if (error) throwOnError(error);
+  return data;
 }
 
 export async function updatePromptTemplate(
   id: string,
-  body: UpdatePromptTemplateBody,
+  body: components["schemas"]["UpdatePromptTemplateDto"],
 ): Promise<PromptTemplate> {
-  const res = await fetch(`${BASE}/prompt-templates/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  const { data, error } = await apiClient.PATCH("/api/v1/prompt-templates/{id}", {
+    params: { path: { id } },
+    body,
   });
-  return json(res);
+  if (error) throwOnError(error);
+  return data;
 }
 
 export async function deletePromptTemplate(id: string): Promise<void> {
-  const res = await fetch(`${BASE}/prompt-templates/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    const body = await (res.json() as Promise<{ error?: { message?: string } }>).catch(
-      (): { error?: { message?: string } } => ({}),
-    );
-    throw new Error(body.error?.message ?? res.statusText);
-  }
+  const { error } = await apiClient.DELETE("/api/v1/prompt-templates/{id}", {
+    params: { path: { id } },
+  });
+  if (error) throwOnError(error);
 }
 
 // ── Feedback ─────────────────────────────────────────────────────────
 
 export async function updateMessageFeedback(
-  messageId: string,
+  id: string,
   feedback: "positive" | "negative",
 ): Promise<void> {
-  const res = await fetch(`${BASE}/messages/${messageId}/feedback`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ feedback }),
+  const { error } = await apiClient.PATCH("/api/v1/messages/{id}/feedback", {
+    params: { path: { id } },
+    body: { feedback },
   });
-  if (!res.ok) {
-    const body = await (res.json() as Promise<{ error?: { message?: string } }>).catch(
-      (): { error?: { message?: string } } => ({}),
-    );
-    throw new Error(body.error?.message ?? res.statusText);
-  }
+  if (error) throwOnError(error);
 }
 
 // ── Documents ────────────────────────────────────────────────────────
 
 export async function uploadDocument(
   file: File,
-): Promise<{ id: string; filename: string; status: string }> {
+): Promise<components["schemas"]["UploadDocumentResponseDto"]> {
+  // Raw fetch: openapi-typescript represents binary fields as `string`, so
+  // we build FormData manually instead of fighting the type mismatch.
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${BASE}/documents`, { method: "POST", body: form });
-  return json(res);
+  const res = await fetch("/api/v1/documents", { method: "POST", body: form });
+  if (!res.ok) {
+    const body = await (res.json() as Promise<ApiErrorBody>).catch((): ApiErrorBody => ({}));
+    throw new Error(body.error?.message ?? res.statusText);
+  }
+  return res.json() as Promise<components["schemas"]["UploadDocumentResponseDto"]>;
 }
 
 export async function listDocuments(): Promise<{ data: Document[] }> {
-  const res = await fetch(`${BASE}/documents`);
-  return json(res);
+  const { data, error } = await apiClient.GET("/api/v1/documents");
+  if (error) throwOnError(error);
+  return data;
 }
 
 export async function deleteDocument(id: string): Promise<void> {
-  await fetch(`${BASE}/documents/${id}`, { method: "DELETE" });
+  const { error } = await apiClient.DELETE("/api/v1/documents/{id}", {
+    params: { path: { id } },
+  });
+  if (error) throwOnError(error);
 }
 
-export async function retryDocument(id: string): Promise<{ status: string }> {
-  const res = await fetch(`${BASE}/documents/${id}/retry`, { method: "POST" });
-  return json(res);
+export async function retryDocument(
+  id: string,
+): Promise<components["schemas"]["RetryDocumentResponseDto"]> {
+  const { data, error } = await apiClient.POST("/api/v1/documents/{id}/retry", {
+    params: { path: { id } },
+  });
+  if (error) throwOnError(error);
+  return data;
 }
 
 // ── Conversations ────────────────────────────────────────────────────
 
-export async function createConversation(): Promise<ConversationCreateResponse> {
-  const res = await fetch(`${BASE}/conversations`, { method: "POST" });
-  return json(res);
+export async function createConversation(): Promise<components["schemas"]["ConversationCreateResponseDto"]> {
+  const { data, error } = await apiClient.POST("/api/v1/conversations");
+  if (error) throwOnError(error);
+  return data;
 }
 
 export async function listConversations(): Promise<{ data: Conversation[]; total: number }> {
-  const res = await fetch(`${BASE}/conversations`);
-  return json(res);
+  const { data, error } = await apiClient.GET("/api/v1/conversations");
+  if (error) throwOnError(error);
+  return data;
 }
 
 export async function updateConversation(
   id: string,
   title: string,
-): Promise<{ id: string; title: string }> {
-  const res = await fetch(`${BASE}/conversations/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title }),
+): Promise<components["schemas"]["ConversationUpdateResponseDto"]> {
+  const { data, error } = await apiClient.PATCH("/api/v1/conversations/{id}", {
+    params: { path: { id } },
+    body: { title },
   });
-  return json(res);
+  if (error) throwOnError(error);
+  return data;
 }
 
 export async function deleteConversation(id: string): Promise<void> {
-  await fetch(`${BASE}/conversations/${id}`, { method: "DELETE" });
+  const { error } = await apiClient.DELETE("/api/v1/conversations/{id}", {
+    params: { path: { id } },
+  });
+  if (error) throwOnError(error);
 }
 
 // ── Messages ─────────────────────────────────────────────────────────
 
-export async function listMessages(conversationId: string): Promise<{ data: Message[] }> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}/messages`);
-  return json(res);
+export async function listMessages(id: string): Promise<{ data: Message[] }> {
+  const { data, error } = await apiClient.GET("/api/v1/conversations/{id}/messages", {
+    params: { path: { id } },
+  });
+  if (error) throwOnError(error);
+  return data;
 }
 
 export interface StreamChatCallbacks {
@@ -170,12 +175,13 @@ export interface StreamChatCallbacks {
 
 /** POST /conversations/:id/messages with SSE streaming response */
 export async function streamChat(
-  conversationId: string,
+  id: string,
   content: string,
   callbacks: StreamChatCallbacks,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}/messages`, {
+  // Raw fetch: SSE streaming is not supported by openapi-fetch.
+  const res = await fetch(`/api/v1/conversations/${id}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content }),
@@ -221,3 +227,18 @@ export async function streamChat(
     }
   }
 }
+
+// ── Evaluations ──────────────────────────────────────────────────────
+
+export async function getEvaluation(
+  id: string,
+): Promise<components["schemas"]["EvaluationResponseDto"]> {
+  const { data, error } = await apiClient.GET("/api/v1/messages/{id}/evaluation", {
+    params: { path: { id } },
+  });
+  if (error) throwOnError(error);
+  return data;
+}
+
+// Re-export for callers that use these types directly from this module
+export type { RetrievedChunk };
