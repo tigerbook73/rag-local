@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import type { Queue } from "bullmq";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -14,6 +14,8 @@ const STORAGE_BUCKET = process.env["STORAGE_BUCKET"] ?? "documents";
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly settingsService: SettingsService,
@@ -93,7 +95,10 @@ export class DocumentsService {
     const doc = await this.prisma.document.findUnique({ where: { id } });
     if (!doc) throw new NotFoundException("Document not found");
 
-    await this.supabase.storage.from(STORAGE_BUCKET).remove([doc.storagePath]);
+    const { error } = await this.supabase.storage.from(STORAGE_BUCKET).remove([doc.storagePath]);
+    if (error) {
+      this.logger.warn(`Storage deletion failed for ${doc.storagePath}: ${error.message}`);
+    }
     await this.prisma.document.delete({ where: { id } });
   }
 

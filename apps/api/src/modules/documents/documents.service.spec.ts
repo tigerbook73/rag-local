@@ -170,6 +170,7 @@ describe("DocumentsService — findOne()", () => {
  * @cases
  *   - [FAIL] throws NotFoundException when document does not exist
  *   - [PASS] removes file from storage and deletes document record when found
+ *   - [PASS] deletes document record even when storage deletion fails
  */
 describe("DocumentsService — remove()", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -190,6 +191,18 @@ describe("DocumentsService — remove()", () => {
     await service.remove("doc-1");
 
     expect(mockSupabaseStorage.remove).toHaveBeenCalledWith(["12345-faq.md"]);
+    expect(mockPrisma.document.delete).toHaveBeenCalledWith({ where: { id: "doc-1" } });
+  });
+
+  it("deletes document record even when storage deletion fails", async () => {
+    const doc = { id: "doc-1", storagePath: "12345-faq.md" };
+    mockPrisma.document.findUnique.mockResolvedValue(doc);
+    mockSupabaseStorage.remove.mockResolvedValue({ error: { message: "Object not found" } });
+    mockPrisma.document.delete.mockResolvedValue(doc);
+
+    const service = await buildService();
+    await service.remove("doc-1");
+
     expect(mockPrisma.document.delete).toHaveBeenCalledWith({ where: { id: "doc-1" } });
   });
 });
