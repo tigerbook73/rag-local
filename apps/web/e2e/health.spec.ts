@@ -6,7 +6,7 @@
  */
 import { test, expect } from "@playwright/test";
 
-const API_BASE = "http://localhost:3001/api/v1";
+const API_BASE = `http://localhost:${process.env["TEST_API_PORT"] ?? "3001"}/api/v1`;
 
 test('returns { status: "ok" } when queue is reachable', async ({ request }) => {
   const res = await request.get(`${API_BASE}/health/queue`);
