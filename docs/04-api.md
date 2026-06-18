@@ -28,6 +28,10 @@ React Query hooks（import 生成的类型，完全类型安全）
 
 生成文件纳入版本控制，CI 构建前端无需启动 API。
 
+> **当前状态（待迁移）：** `apps/web/src/types/api.ts` 目前为手写类型，尚未切换到 `openapi-typescript` 自动生成版本。原因是各 Controller 缺少 `@ApiResponse({ type: XxxDto })` 装饰器，导致 OpenAPI spec 中 response schema 为空，生成的类型对前端无实际用处。
+>
+> **迁移前置条件：** 为所有 endpoint 补全 `@ApiResponse` 注解（含 response DTO class），运行 `pnpm gen:types` 验证生成结果后，再将前端 import 切换至生成类型并删除手写文件。
+
 ---
 
 ## 4.3 Conversations
