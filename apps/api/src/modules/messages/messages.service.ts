@@ -45,6 +45,23 @@ export class MessagesService {
     };
 
     try {
+      // Fetch conversation history before saving current user message
+      const historyCount = settings.conversationHistoryWindow * 2;
+      const historyRows =
+        historyCount > 0
+          ? await this.prisma.message.findMany({
+              where: { conversationId },
+              orderBy: { createdAt: "desc" },
+              take: historyCount,
+              select: { role: true, content: true },
+            })
+          : [];
+      historyRows.reverse();
+
+      this.logger.debug(
+        `History: ${historyRows.length} messages (window=${settings.conversationHistoryWindow} rounds) conv=${conversationId}`,
+      );
+
       // Save user message
       await this.prisma.message.create({
         data: { conversationId, role: "user", content: dto.content },
@@ -63,8 +80,14 @@ export class MessagesService {
 
       const contextText = chunks.map((c, i) => `[${i + 1}] ${c.content}`).join("\n\n");
 
+      const history: LLMMessage[] = historyRows.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
       const messages: LLMMessage[] = [
         { role: "system", content: systemPrompt },
+        ...history,
         {
           role: "user",
           content: `Context:\n${contextText}\n\nQuestion: ${dto.content}`,

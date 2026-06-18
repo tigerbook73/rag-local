@@ -9,6 +9,7 @@ interface ConversationState {
 
   setConversationId: (id: string) => void;
   resetConversation: () => void;
+  loadConversation: (id: string, messages: Message[]) => void;
   addUserMessage: (content: string) => void;
   startStreaming: () => void;
   appendStreamToken: (token: string) => void;
@@ -26,6 +27,9 @@ export const useConversationStore = create<ConversationState>((set) => ({
 
   resetConversation: () =>
     set({ conversationId: null, messages: [], streaming: false, streamingContent: "" }),
+
+  loadConversation: (id, messages) =>
+    set({ conversationId: id, messages, streaming: false, streamingContent: "" }),
 
   addUserMessage: (content) =>
     set((s) => ({
