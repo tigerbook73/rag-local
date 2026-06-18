@@ -194,6 +194,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/prompt-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromptTemplatesController_findAll"];
+        put?: never;
+        post: operations["PromptTemplatesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/prompt-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["PromptTemplatesController_remove"];
+        options?: never;
+        head?: never;
+        patch: operations["PromptTemplatesController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -201,8 +233,6 @@ export interface components {
         AppSettingsResponseDto: {
             /** @enum {string} */
             llmProvider: "openai" | "deepseek";
-            llmModel: string;
-            llmBaseUrl: string | null;
             /** @enum {string} */
             chunkingStrategy: "fixed" | "semantic";
             chunkSize: number;
@@ -326,6 +356,26 @@ export interface components {
             /** @enum {string} */
             status: "pending" | "completed";
             evaluations?: components["schemas"]["EvaluationItemResponseDto"][];
+        };
+        PromptTemplateResponseDto: {
+            id: string;
+            name: string;
+            content: string;
+            isActive: boolean;
+            createdAt: string;
+            updatedAt: string;
+        };
+        PromptTemplateListResponseDto: {
+            data: components["schemas"]["PromptTemplateResponseDto"][];
+        };
+        CreatePromptTemplateDto: {
+            name: string;
+            content: string;
+        };
+        UpdatePromptTemplateDto: {
+            name?: string;
+            content?: string;
+            isActive?: boolean;
         };
     };
     responses: never;
@@ -698,6 +748,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvaluationResponseDto"];
+                };
+            };
+        };
+    };
+    PromptTemplatesController_findAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptTemplateListResponseDto"];
+                };
+            };
+        };
+    };
+    PromptTemplatesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePromptTemplateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptTemplateResponseDto"];
+                };
+            };
+        };
+    };
+    PromptTemplatesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromptTemplatesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePromptTemplateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptTemplateResponseDto"];
                 };
             };
         };

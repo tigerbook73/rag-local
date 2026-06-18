@@ -3,6 +3,7 @@ import type {
   ConversationCreateResponse,
   Document,
   Message,
+  PromptTemplate,
   Settings,
   SseDeltaEvent,
   SseDoneEvent,
@@ -11,6 +12,8 @@ import type {
 import type { components } from "../types/generated/api.js";
 
 type UpdateSettingsBody = components["schemas"]["UpdateSettingsDto"];
+type CreatePromptTemplateBody = components["schemas"]["CreatePromptTemplateDto"];
+type UpdatePromptTemplateBody = components["schemas"]["UpdatePromptTemplateDto"];
 
 const BASE = "/api/v1";
 
@@ -38,6 +41,65 @@ export async function updateSettings(body: UpdateSettingsBody): Promise<Settings
     body: JSON.stringify(body),
   });
   return json(res);
+}
+
+// ── Prompt Templates ─────────────────────────────────────────────────
+
+export async function listPromptTemplates(): Promise<{ data: PromptTemplate[] }> {
+  const res = await fetch(`${BASE}/prompt-templates`);
+  return json(res);
+}
+
+export async function createPromptTemplate(
+  body: CreatePromptTemplateBody,
+): Promise<PromptTemplate> {
+  const res = await fetch(`${BASE}/prompt-templates`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return json(res);
+}
+
+export async function updatePromptTemplate(
+  id: string,
+  body: UpdatePromptTemplateBody,
+): Promise<PromptTemplate> {
+  const res = await fetch(`${BASE}/prompt-templates/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return json(res);
+}
+
+export async function deletePromptTemplate(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/prompt-templates/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const body = await (res.json() as Promise<{ error?: { message?: string } }>).catch(
+      (): { error?: { message?: string } } => ({}),
+    );
+    throw new Error(body.error?.message ?? res.statusText);
+  }
+}
+
+// ── Feedback ─────────────────────────────────────────────────────────
+
+export async function updateMessageFeedback(
+  messageId: string,
+  feedback: "positive" | "negative",
+): Promise<void> {
+  const res = await fetch(`${BASE}/messages/${messageId}/feedback`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ feedback }),
+  });
+  if (!res.ok) {
+    const body = await (res.json() as Promise<{ error?: { message?: string } }>).catch(
+      (): { error?: { message?: string } } => ({}),
+    );
+    throw new Error(body.error?.message ?? res.statusText);
+  }
 }
 
 // ── Documents ────────────────────────────────────────────────────────

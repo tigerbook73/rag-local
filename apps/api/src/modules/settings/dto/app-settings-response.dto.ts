@@ -4,12 +4,6 @@ export class AppSettingsResponseDto {
   @ApiProperty({ enum: ["openai", "deepseek"] })
   llmProvider!: "openai" | "deepseek";
 
-  @ApiProperty()
-  llmModel!: string;
-
-  @ApiProperty({ type: String, nullable: true })
-  llmBaseUrl!: string | null;
-
   @ApiProperty({ enum: ["fixed", "semantic"] })
   chunkingStrategy!: "fixed" | "semantic";
 
