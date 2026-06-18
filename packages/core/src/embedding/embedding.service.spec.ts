@@ -1,6 +1,6 @@
 /**
  * @test-file   EmbeddingService
- * @description unit tests for embed() and embedBatch() with mocked fetch
+ * @description unit tests for embed(), embedBatch(), and rerank() with mocked fetch
  * @ai-generated
  * @reviewed-by (!HUMAN EDIT ONLY):
  */
@@ -103,5 +103,46 @@ describe("EmbeddingService — embedBatch()", () => {
     const service = new EmbeddingService();
     service.init();
     await expect(service.embedBatch(["a"])).rejects.toThrow("422");
+  });
+});
+
+/**
+ * @test-suite  EmbeddingService — rerank()
+ * @target      cross-encoder reranking via single POST /rerank
+ * @strategy    unit, global fetch mocked
+ * @cases
+ *   - [FAIL] throws "not initialized" error when init() has not been called
+ *   - [PASS] returns scores array when HTTP response is ok
+ *   - [FAIL] throws error with status code when HTTP response is not ok
+ */
+describe("EmbeddingService — rerank()", () => {
+  it('throws "not initialized" error when init() has not been called', async () => {
+    const service = new EmbeddingService();
+    await expect(service.rerank("query", ["passage"])).rejects.toThrow("not initialized");
+  });
+
+  it("returns scores array when HTTP response is ok", async () => {
+    const scores = [0.87, 0.43];
+    mockFetch.mockReturnValue(makeJsonResponse({ scores }));
+
+    const service = new EmbeddingService();
+    service.init();
+    const result = await service.rerank("what is X?", ["passage A", "passage B"]);
+    expect(result).toEqual(scores);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/rerank"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ query: "what is X?", passages: ["passage A", "passage B"] }),
+      }),
+    );
+  });
+
+  it("throws error with status code when HTTP response is not ok", async () => {
+    mockFetch.mockReturnValue(makeJsonResponse({}, false, 503));
+
+    const service = new EmbeddingService();
+    service.init();
+    await expect(service.rerank("q", ["p"])).rejects.toThrow("503");
   });
 });

@@ -30,4 +30,17 @@ export class EmbeddingService {
     const { embeddings } = (await res.json()) as { embeddings: number[][] };
     return embeddings;
   }
+
+  /** Cross-encoder reranking — returns relevance scores for each passage (same order as input) */
+  async rerank(query: string, passages: string[]): Promise<number[]> {
+    if (!this.baseUrl) throw new Error("EmbeddingService not initialized — call init() first");
+    const res = await fetch(`${this.baseUrl}/rerank`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, passages }),
+    });
+    if (!res.ok) throw new Error(`Reranking service error: ${res.status} ${res.statusText}`);
+    const { scores } = (await res.json()) as { scores: number[] };
+    return scores;
+  }
 }

@@ -82,20 +82,20 @@ test.describe("Navigation — /quality", () => {
 
 /**
  * @test-suite  Navigation — /settings
- * @target      SettingsPage renders coming-soon placeholder without JS errors
+ * @target      SettingsPage renders Query tab without JS errors
  * @strategy    e2e, browser workflow
  * @cases
- *   - [PASS] shows coming-soon text without JS errors when navigating to /settings
+ *   - [PASS] shows Query tab content without JS errors when navigating to /settings
  */
 test.describe("Navigation — /settings", () => {
-  test("shows coming-soon text without JS errors when navigating to /settings", async ({
+  test("shows Query tab content without JS errors when navigating to /settings", async ({
     page,
   }) => {
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(err.message));
 
     await page.goto("/settings");
-    await expect(page.getByText("coming soon")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Query" })).toBeVisible();
     expect(errors).toHaveLength(0);
   });
 });

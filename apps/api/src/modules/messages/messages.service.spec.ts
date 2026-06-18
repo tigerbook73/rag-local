@@ -30,6 +30,8 @@ const DEFAULT_SETTINGS = {
   llmModel: "deepseek-chat",
   conversationHistoryWindow: 2,
   topK: 5,
+  hydeEnabled: false,
+  rerankingEnabled: false,
 };
 
 function makeRes(): Response {
@@ -96,7 +98,7 @@ describe("MessagesService.findAll", () => {
 
 /**
  * @test-suite  MessagesService.streamChat
- * @target      conversation not found / history injection / SSE events
+ * @target      conversation not found / history injection / SSE events / retrieval options
  * @strategy    unit, prisma + LLM mocks
  * @cases
  *   - [PASS] throws NotFoundException when conversation does not exist
@@ -104,6 +106,7 @@ describe("MessagesService.findAll", () => {
  *   - [PASS] injects fetched history between system prompt and current user turn
  *   - [PASS] emits delta and done SSE events
  *   - [PASS] does not inject history when conversationHistoryWindow is 0
+ *   - [PASS] passes hyde and reranking flags from settings to retrieve()
  */
 describe("MessagesService.streamChat", () => {
   it("throws NotFoundException when conversation does not exist", async () => {
@@ -159,6 +162,30 @@ describe("MessagesService.streamChat", () => {
     const writes = (res.write as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0] as string);
     expect(writes.some((w) => w.startsWith("event: delta"))).toBe(true);
     expect(writes.some((w) => w.startsWith("event: done"))).toBe(true);
+  });
+
+  it("passes hyde and reranking flags from settings to retrieve()", async () => {
+    mockPrisma.conversation.findUnique.mockResolvedValue({ id: "conv-1" });
+    mockSettingsService.getSettings.mockResolvedValue({
+      ...DEFAULT_SETTINGS,
+      hydeEnabled: true,
+      rerankingEnabled: true,
+    });
+    mockPrisma.message.findMany.mockResolvedValue([]);
+    mockPrisma.message.create.mockResolvedValue({ id: "msg-new" });
+    mockPrisma.promptTemplate.findFirst.mockResolvedValue(null);
+    mockRetrievalService.retrieve.mockResolvedValue({ chunks: [], retrievalMs: 5 });
+    mockLlmService.stream.mockImplementation(function* () {
+      yield "ok";
+    });
+
+    const svc = await buildService();
+    await svc.streamChat("conv-1", { content: "q" }, makeRes());
+
+    expect(mockRetrievalService.retrieve).toHaveBeenCalledWith(
+      "q",
+      expect.objectContaining({ hyde: true, reranking: true }),
+    );
   });
 
   it("does not inject history when conversationHistoryWindow is 0", async () => {
