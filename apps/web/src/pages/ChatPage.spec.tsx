@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ChatPage } from "./ChatPage.js";
 import { useConversationStore } from "../stores/conversation.store.js";
-import type { Message } from "../types/api.js";
+import type { Message } from "../types/index.js";
 
 vi.mock("../lib/api.js", () => ({
   createConversation: vi.fn(),

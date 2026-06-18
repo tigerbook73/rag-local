@@ -44,7 +44,7 @@ export default tseslint.config(
       "**/.turbo/**",
       "**/coverage/**",
       "**/src/generated/**",
-      "apps/web/src/types/api.ts",
+      "apps/web/src/types/generated/api.ts",
       "eslint.config.js",
     ],
   },

@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { KnowledgePage, StatusBadge } from "./KnowledgePage.js";
 import { listDocuments, deleteDocument } from "../lib/api.js";
-import type { Document } from "../types/api.js";
+import type { Document } from "../types/index.js";
 
 vi.mock("../lib/api.js", () => ({
   listDocuments: vi.fn(),

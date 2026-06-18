@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table.js";
 import { Card, CardContent } from "@/components/ui/card.js";
 import { listDocuments, uploadDocument, deleteDocument, retryDocument } from "../lib/api.js";
-import type { Document } from "../types/api.js";
+import type { Document } from "../types/index.js";
 
 const POLL_INTERVAL_MS = 3000;
 
