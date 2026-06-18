@@ -126,7 +126,9 @@ export async function retryDocument(
 
 // ── Conversations ────────────────────────────────────────────────────
 
-export async function createConversation(): Promise<components["schemas"]["ConversationCreateResponseDto"]> {
+export async function createConversation(): Promise<
+  components["schemas"]["ConversationCreateResponseDto"]
+> {
   const { data, error } = await apiClient.POST("/api/v1/conversations");
   if (error) throwOnError(error);
   return data;
