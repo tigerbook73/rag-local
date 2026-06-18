@@ -78,3 +78,16 @@ pnpm preview    # 预览构建产物
 ### shadcn/ui 使用方式
 
 组件复制到 `src/components/ui/`（不是 npm 包），通过 `@/components/ui/<component>` 导入，按需添加。新增组件用 `npx shadcn@latest add <component>` 自动处理依赖和文件。
+
+### Tailwind CSS 类名规范（v4）
+
+使用 Tailwind v4 的简写形式，避免旧版冗余写法：
+
+| 旧写法                 | 正确写法                                     |
+| ---------------------- | -------------------------------------------- |
+| `flex-shrink-0`        | `shrink-0`                                   |
+| `flex-grow`            | `grow`                                       |
+| `max-w-[200px]`        | `max-w-50`（使用间距比例，200px = 50 × 4px） |
+| `overflow-x-hidden` 等 | 保持不变（这些没有简写）                     |
+
+像素值转换：Tailwind 默认间距单位为 4px，`max-w-[Xpx]` → `max-w-{X/4}`（当 X 能被 4 整除时）。
