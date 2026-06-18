@@ -49,15 +49,15 @@ test.describe("Navigation — /knowledge", () => {
  * @target      HistoryPage renders coming-soon placeholder without JS errors
  * @strategy    e2e, browser workflow
  * @cases
- *   - [PASS] shows coming-soon text without JS errors when navigating to /history
+ *   - [PASS] shows 历史记录 heading without JS errors when navigating to /history
  */
 test.describe("Navigation — /history", () => {
-  test("shows coming-soon text without JS errors when navigating to /history", async ({ page }) => {
+  test("shows 历史记录 heading without JS errors when navigating to /history", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(err.message));
 
     await page.goto("/history");
-    await expect(page.getByText("coming soon")).toBeVisible();
+    await expect(page.getByText("历史记录")).toBeVisible();
     expect(errors).toHaveLength(0);
   });
 });
