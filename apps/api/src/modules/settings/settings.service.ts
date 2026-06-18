@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import type { UpdateSettingsDto } from "./dto/update-settings.dto.js";
 import { SETTINGS_KEYS, SETTINGS_DEFAULTS } from "./settings.constants.js";
@@ -34,6 +34,8 @@ function toBoolean(v: string): boolean {
 
 @Injectable()
 export class SettingsService {
+  private readonly logger = new Logger(SettingsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getSettings(): Promise<AppSettings> {
@@ -98,6 +100,13 @@ export class SettingsService {
       (before.chunkingStrategy !== after.chunkingStrategy ||
         before.chunkSize !== after.chunkSize ||
         before.chunkOverlap !== after.chunkOverlap);
+
+    const changedKeys = Object.entries(dtoToKey)
+      .filter(([dtoField]) => dto[dtoField as keyof UpdateSettingsDto] !== undefined)
+      .map(([, key]) => key);
+    this.logger.log(
+      `Settings updated: [${changedKeys.join(", ")}]${requiresReindex ? " — reindex required" : ""}`,
+    );
 
     return requiresReindex ? { ...after, requiresReindex: true } : after;
   }

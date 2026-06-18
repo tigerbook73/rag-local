@@ -14,7 +14,10 @@ export class MessagesBootstrapService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    void this.embedding.init();
+    this.embedding.init();
+    this.logger.log(
+      `Embedding sidecar configured: ${process.env["EMBEDDING_SERVICE_URL"] ?? "http://localhost:8000"}`,
+    );
 
     const { llmProvider, llmModel, llmBaseUrl } = await this.settings.getSettings();
     this.llm.init({
@@ -23,5 +26,6 @@ export class MessagesBootstrapService implements OnApplicationBootstrap {
       baseUrl: llmBaseUrl ?? undefined,
       apiKey: getLlmApiKey(llmProvider),
     });
+    this.logger.log(`LLM initialized: provider=${llmProvider} model=${llmModel}`);
   }
 }
