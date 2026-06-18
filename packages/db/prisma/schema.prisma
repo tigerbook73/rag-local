@@ -103,6 +103,7 @@ model Document {
   chunkSize             Int              @map("chunk_size")
   chunkOverlap          Int              @map("chunk_overlap")
   totalChunks           Int?             @map("total_chunks")
+  processedChunks       Int?             @map("processed_chunks")
   processingStartedAt   DateTime?        @map("processing_started_at") @db.Timestamptz
   processingCompletedAt DateTime?        @map("processing_completed_at") @db.Timestamptz
   createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz
@@ -124,6 +125,7 @@ model Chunk {
   document   Document                    @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
+  // @@index([embedding(ops: HnswOps)], map: "chunks_embedding_idx", type: Hnsw)
   @@map("chunks")
 }
 

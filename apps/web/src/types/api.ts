@@ -54,6 +54,7 @@ export interface Document {
   chunkSize: number;
   chunkOverlap: number;
   totalChunks?: number;
+  processedChunks?: number;
   processingCompletedAt?: string;
   createdAt: string;
 }

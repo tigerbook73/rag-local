@@ -9,14 +9,19 @@ pre-commit:
         fi
     lint:
       glob: "*.{ts,tsx,js}"
-      run: pnpm lint
-    format-check:
+      run: pnpm exec eslint {staged_files}
+    format:
       glob: "*.{ts,tsx,js,json,md,yaml,yml}"
-      run: pnpm format:check
+      run: pnpm exec prettier --write {staged_files}
     # aisk-test-review-gate-check-reviewed-by-commit-marker:
     #   run: node .aisk/test-review-gate/scripts/check-reviewed-by-commit-marker.cjs {staged_files}
     # aisk-test-review-gate-check-test-cases-match-it:
     #   run: node .aisk/test-review-gate/scripts/check-test-cases-match-it.cjs {staged_files}
+
+pre-push:
+  commands:
+    verify:
+      run: pnpm verify
 
 commit-msg:
   commands:

@@ -71,6 +71,12 @@ export class EmbeddingProcessor extends WorkerHost {
         throw new Error("Document produced zero chunks");
       }
 
+      // Expose total chunk count immediately so clients can show a progress bar
+      await this.prisma.document.update({
+        where: { id: documentId },
+        data: { totalChunks: chunks.length, processedChunks: 0 },
+      });
+
       // Delete stale chunks (re-embedding scenario)
       await this.prisma.$executeRawUnsafe(
         `DELETE FROM chunks WHERE document_id = $1::uuid`,
@@ -101,6 +107,11 @@ export class EmbeddingProcessor extends WorkerHost {
             chunk.index,
           );
         }
+
+        await this.prisma.document.update({
+          where: { id: documentId },
+          data: { processedChunks: i + batchChunks.length },
+        });
       }
 
       await this.prisma.document.update({

@@ -1,6 +1,6 @@
 /**
  * @test-file   DocumentsService
- * @description unit tests for upload(), findOne(), remove(), and retry() with all dependencies mocked
+ * @description unit tests for upload(), findOne(), remove(), and retry() including processedChunks reset on retry
  * @ai-generated
  * @reviewed-by (!HUMAN EDIT ONLY):
  */
@@ -170,6 +170,7 @@ describe("DocumentsService — findOne()", () => {
  * @cases
  *   - [FAIL] throws NotFoundException when document does not exist
  *   - [PASS] removes file from storage and deletes document record when found
+ *   - [PASS] deletes document record even when storage deletion fails
  */
 describe("DocumentsService — remove()", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -192,6 +193,18 @@ describe("DocumentsService — remove()", () => {
     expect(mockSupabaseStorage.remove).toHaveBeenCalledWith(["12345-faq.md"]);
     expect(mockPrisma.document.delete).toHaveBeenCalledWith({ where: { id: "doc-1" } });
   });
+
+  it("deletes document record even when storage deletion fails", async () => {
+    const doc = { id: "doc-1", storagePath: "12345-faq.md" };
+    mockPrisma.document.findUnique.mockResolvedValue(doc);
+    mockSupabaseStorage.remove.mockResolvedValue({ error: { message: "Object not found" } });
+    mockPrisma.document.delete.mockResolvedValue(doc);
+
+    const service = await buildService();
+    await service.remove("doc-1");
+
+    expect(mockPrisma.document.delete).toHaveBeenCalledWith({ where: { id: "doc-1" } });
+  });
 });
 
 /**
@@ -202,6 +215,7 @@ describe("DocumentsService — remove()", () => {
  *   - [FAIL] throws NotFoundException when document does not exist
  *   - [FAIL] throws BadRequestException when document status is not "failed"
  *   - [PASS] resets status to pending and enqueues job when document has failed status
+ *   - [PASS] resets processedChunks to null when retrying a failed document
  */
 describe("DocumentsService — retry()", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -236,7 +250,9 @@ describe("DocumentsService — retry()", () => {
     const result = await service.retry("doc-1");
 
     expect(mockPrisma.document.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: "pending", errorMessage: null } }),
+      expect.objectContaining({
+        data: { status: "pending", errorMessage: null, processedChunks: null },
+      }),
     );
     expect(mockQueue.add).toHaveBeenCalledWith(
       "embed",
@@ -244,5 +260,35 @@ describe("DocumentsService — retry()", () => {
       expect.any(Object),
     );
     expect(result).toEqual({ status: "pending" });
+  });
+
+  it("resets processedChunks to null when retrying a failed document", async () => {
+    const doc = {
+      id: "doc-2",
+      status: "failed",
+      storagePath: "path.md",
+      fileType: "md",
+      chunkingStrategy: "fixed",
+      chunkSize: 512,
+      chunkOverlap: 50,
+      processedChunks: 32,
+      totalChunks: 100,
+    };
+    mockPrisma.document.findUnique.mockResolvedValue(doc);
+    mockPrisma.document.update.mockResolvedValue({
+      ...doc,
+      status: "pending",
+      processedChunks: null,
+    });
+    mockQueue.add.mockResolvedValue({});
+
+    const service = await buildService();
+    await service.retry("doc-2");
+
+    expect(mockPrisma.document.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ processedChunks: null }),
+      }),
+    );
   });
 });
