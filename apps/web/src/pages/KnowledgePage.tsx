@@ -2,17 +2,35 @@ import { useCallback, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Upload, Trash2, RefreshCw, FileText } from "lucide-react";
 import { Progress } from "@/components/ui/progress.js";
+import { Badge } from "@/components/ui/badge.js";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table.js";
+import { Card, CardContent } from "@/components/ui/card.js";
 import { listDocuments, uploadDocument, deleteDocument, retryDocument } from "../lib/api.js";
 import type { Document } from "../types/api.js";
 
 const POLL_INTERVAL_MS = 3000;
 
 const STATUS_CONFIG: Record<Document["status"], { label: string; className: string }> = {
-  pending: { label: "待处理", className: "bg-gray-100 text-gray-600" },
-  processing: { label: "处理中", className: "bg-blue-100 text-blue-700 animate-pulse" },
-  done: { label: "完成", className: "bg-green-100 text-green-700" },
-  failed: { label: "失败", className: "bg-red-100 text-red-700" },
+  pending: { label: "待处理", className: "bg-gray-100 text-gray-600 border-transparent" },
+  processing: {
+    label: "处理中",
+    className: "bg-blue-100 text-blue-700 border-transparent animate-pulse",
+  },
+  done: { label: "完成", className: "bg-green-100 text-green-700 border-transparent" },
+  failed: { label: "失败", className: "bg-red-100 text-red-700 border-transparent" },
 };
+
+export function StatusBadge({ status }: { status: Document["status"] }) {
+  const cfg = STATUS_CONFIG[status];
+  return <Badge className={cfg.className}>{cfg.label}</Badge>;
+}
 
 export function KnowledgePage() {
   const qc = useQueryClient();
@@ -105,18 +123,18 @@ export function KnowledgePage() {
         <>
           {/* Desktop table */}
           <div className="hidden md:block rounded-lg border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">文件名</th>
-                  <th className="text-left px-4 py-3 font-medium">格式</th>
-                  <th className="text-left px-4 py-3 font-medium">状态</th>
-                  <th className="text-left px-4 py-3 font-medium">chunks</th>
-                  <th className="text-left px-4 py-3 font-medium">上传时间</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="px-4">文件名</TableHead>
+                  <TableHead className="px-4">格式</TableHead>
+                  <TableHead className="px-4">状态</TableHead>
+                  <TableHead className="px-4">chunks</TableHead>
+                  <TableHead className="px-4">上传时间</TableHead>
+                  <TableHead className="px-4" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {documents.map((doc) => (
                   <DocumentRow
                     key={doc.id}
@@ -125,8 +143,8 @@ export function KnowledgePage() {
                     onRetry={() => retry.mutate(doc.id)}
                   />
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Mobile cards */}
@@ -146,17 +164,6 @@ export function KnowledgePage() {
   );
 }
 
-function StatusBadge({ status }: { status: Document["status"] }) {
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cfg.className}`}
-    >
-      {cfg.label}
-    </span>
-  );
-}
-
 function DocumentRow({
   doc,
   onDelete,
@@ -167,15 +174,19 @@ function DocumentRow({
   onRetry: () => void;
 }) {
   return (
-    <tr className="hover:bg-muted/30">
-      <td className="px-4 py-3 flex items-center gap-2">
-        <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span className="truncate max-w-[200px]" title={doc.filename}>
-          {doc.filename}
-        </span>
-      </td>
-      <td className="px-4 py-3 text-muted-foreground uppercase text-xs">{doc.fileType}</td>
-      <td className="px-4 py-3">
+    <TableRow>
+      <TableCell className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="truncate max-w-50" title={doc.filename}>
+            {doc.filename}
+          </span>
+        </div>
+      </TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground uppercase text-xs">
+        {doc.fileType}
+      </TableCell>
+      <TableCell className="px-4 py-3">
         <StatusBadge status={doc.status} />
         {doc.status === "processing" && doc.totalChunks != null && (
           <div className="mt-1 space-y-0.5">
@@ -188,12 +199,12 @@ function DocumentRow({
             </span>
           </div>
         )}
-      </td>
-      <td className="px-4 py-3 text-muted-foreground">{doc.totalChunks ?? "—"}</td>
-      <td className="px-4 py-3 text-muted-foreground">
+      </TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{doc.totalChunks ?? "—"}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">
         {new Date(doc.createdAt).toLocaleDateString()}
-      </td>
-      <td className="px-4 py-3">
+      </TableCell>
+      <TableCell className="px-4 py-3">
         <div className="flex items-center gap-2 justify-end">
           {doc.status === "failed" && (
             <button
@@ -212,8 +223,8 @@ function DocumentRow({
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -227,46 +238,48 @@ function DocumentCard({
   onRetry: () => void;
 }) {
   return (
-    <div className="border rounded-lg p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          <span className="font-medium text-sm truncate">{doc.filename}</span>
+    <Card className="gap-0 rounded-lg py-0 shadow-none">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="font-medium text-sm truncate">{doc.filename}</span>
+          </div>
+          <StatusBadge status={doc.status} />
         </div>
-        <StatusBadge status={doc.status} />
-      </div>
-      <div className="mt-2 text-xs text-muted-foreground flex items-center gap-3">
-        <span className="uppercase">{doc.fileType}</span>
-        {doc.totalChunks != null && <span>{doc.totalChunks} chunks</span>}
-        <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
-      </div>
-      {doc.status === "processing" && doc.totalChunks != null && (
-        <div className="mt-2 space-y-0.5">
-          <Progress
-            value={Math.round(((doc.processedChunks ?? 0) / doc.totalChunks) * 100)}
-            className="h-1 w-full"
-          />
-          <span className="text-xs text-muted-foreground">
-            {doc.processedChunks ?? 0}/{doc.totalChunks} chunks
-          </span>
+        <div className="mt-2 text-xs text-muted-foreground flex items-center gap-3">
+          <span className="uppercase">{doc.fileType}</span>
+          {doc.totalChunks != null && <span>{doc.totalChunks} chunks</span>}
+          <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
         </div>
-      )}
-      <div className="mt-3 flex gap-2 justify-end">
-        {doc.status === "failed" && (
-          <button
-            onClick={onRetry}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className="h-3 w-3" /> 重试
-          </button>
+        {doc.status === "processing" && doc.totalChunks != null && (
+          <div className="mt-2 space-y-0.5">
+            <Progress
+              value={Math.round(((doc.processedChunks ?? 0) / doc.totalChunks) * 100)}
+              className="h-1 w-full"
+            />
+            <span className="text-xs text-muted-foreground">
+              {doc.processedChunks ?? 0}/{doc.totalChunks} chunks
+            </span>
+          </div>
         )}
-        <button
-          onClick={onDelete}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="h-3 w-3" /> 删除
-        </button>
-      </div>
-    </div>
+        <div className="mt-3 flex gap-2 justify-end">
+          {doc.status === "failed" && (
+            <button
+              onClick={onRetry}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <RefreshCw className="h-3 w-3" /> 重试
+            </button>
+          )}
+          <button
+            onClick={onDelete}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3 w-3" /> 删除
+          </button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
