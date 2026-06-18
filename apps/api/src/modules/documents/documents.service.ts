@@ -75,7 +75,9 @@ export class DocumentsService {
       backoff: { type: "exponential", delay: 5000 },
     });
 
-    this.logger.log(`Document uploaded: id=${doc.id} filename=${originalname} fileType=${fileType}`);
+    this.logger.log(
+      `Document uploaded: id=${doc.id} filename=${originalname} fileType=${fileType}`,
+    );
     return { id: doc.id, filename: doc.filename, status: doc.status };
   }
 
