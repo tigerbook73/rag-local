@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Send, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { createConversation, streamChat, updateConversation } from "../lib/api.js";
 import { useConversationStore } from "../stores/conversation.store.js";
-import type { Message, RetrievedChunk } from "../types/api.js";
+import type { Message, RetrievedChunk } from "../types/index.js";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";

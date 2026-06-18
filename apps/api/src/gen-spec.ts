@@ -24,10 +24,15 @@ async function generate(): Promise<void> {
   const config = new DocumentBuilder().setTitle("RAG Local API").setVersion("1.0").build();
   const document = SwaggerModule.createDocument(app, config);
 
-  const outPath = process.argv[2] ?? "openapi.json";
-  fs.writeFileSync(outPath, JSON.stringify(document, null, 2));
+  const outPath = process.argv[2];
+  const json = JSON.stringify(document, null, 2);
+  if (outPath) {
+    fs.writeFileSync(outPath, json);
+  } else {
+    process.stdout.write(json);
+  }
 
-  process.exit(0);
+  await app.close();
 }
 
 void generate();

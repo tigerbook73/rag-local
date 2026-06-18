@@ -1,11 +1,12 @@
 import type {
   Conversation,
+  ConversationCreateResponse,
   Document,
   Message,
   SseDeltaEvent,
   SseDoneEvent,
   SseErrorEvent,
-} from "../types/api.js";
+} from "../types/index.js";
 
 const BASE = "/api/v1";
 
@@ -46,7 +47,7 @@ export async function retryDocument(id: string): Promise<{ status: string }> {
 
 // ── Conversations ────────────────────────────────────────────────────
 
-export async function createConversation(): Promise<Conversation> {
+export async function createConversation(): Promise<ConversationCreateResponse> {
   const res = await fetch(`${BASE}/conversations`, { method: "POST" });
   return json(res);
 }

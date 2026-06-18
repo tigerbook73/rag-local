@@ -133,15 +133,14 @@ Turborepo 根据 `turbo.json` 中的 `dependsOn` 保证 `packages/core` 和 `pac
 }
 ```
 
-**`gen:types` — 前端类型生成**（需 API 已在运行）：
+**`gen:types` — 前端类型生成**：
 
 ```bash
 pnpm gen:types
-# 等价于：
-# openapi-typescript http://localhost:3001/api-json -o apps/web/src/types/api.ts
+# 构建 API，通过 stdout 生成 OpenAPI spec，并写入 apps/web/src/types/generated/api.ts
 ```
 
-生成文件 `apps/web/src/types/api.ts` 纳入版本控制，CI 构建前端无需启动 API。
+生成文件 `apps/web/src/types/generated/api.ts` 纳入版本控制；`apps/web/src/types/index.ts` 是前端稳定类型入口。
 
 ---
 

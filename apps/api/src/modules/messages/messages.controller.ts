@@ -1,9 +1,10 @@
 import { Body, Controller, Get, HttpCode, Param, Patch, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiNoContentResponse, ApiOkResponse, ApiProduces, ApiTags } from "@nestjs/swagger";
 import { MessagesService } from "./messages.service.js";
 import { SendMessageDto } from "./dto/send-message.dto.js";
 import { UpdateFeedbackDto } from "./dto/update-feedback.dto.js";
+import { EvaluationResponseDto, MessageListResponseDto } from "./dto/message-response.dto.js";
 
 @ApiTags("messages")
 @Controller()
@@ -11,12 +12,14 @@ export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
   @Get("conversations/:id/messages")
+  @ApiOkResponse({ type: MessageListResponseDto })
   findAll(@Param("id") conversationId: string) {
     return this.messagesService.findAll(conversationId);
   }
 
   @Post("conversations/:id/messages")
   @HttpCode(200)
+  @ApiProduces("text/event-stream")
   async sendMessage(
     @Param("id") conversationId: string,
     @Body() dto: SendMessageDto,
@@ -41,11 +44,13 @@ export class MessagesController {
 
   @Patch("messages/:id/feedback")
   @HttpCode(204)
+  @ApiNoContentResponse()
   updateFeedback(@Param("id") id: string, @Body() dto: UpdateFeedbackDto) {
     return this.messagesService.updateFeedback(id, dto);
   }
 
   @Get("messages/:id/evaluation")
+  @ApiOkResponse({ type: EvaluationResponseDto })
   getEvaluation(@Param("id") id: string) {
     return this.messagesService.getEvaluation(id);
   }

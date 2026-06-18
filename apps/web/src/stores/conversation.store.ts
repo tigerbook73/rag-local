@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Message, SseDoneEvent } from "../types/api.js";
+import type { Message, SseDoneEvent } from "../types/index.js";
 
 interface ConversationState {
   conversationId: string | null;
