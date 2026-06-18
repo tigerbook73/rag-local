@@ -40,7 +40,11 @@ export class EmbeddingProcessor extends WorkerHost {
     const { documentId, storagePath, fileType, chunkingStrategy, chunkSize, chunkOverlap } =
       job.data;
 
-    this.logger.log(`Processing document ${documentId}`);
+    if (job.attemptsMade > 0) {
+      this.logger.warn(`Retrying document ${documentId} (attempt ${job.attemptsMade + 1})`);
+    } else {
+      this.logger.log(`Processing document ${documentId}`);
+    }
 
     await this.prisma.document.update({
       where: { id: documentId },
@@ -127,7 +131,10 @@ export class EmbeddingProcessor extends WorkerHost {
       this.logger.log(`Document ${documentId} done — ${chunks.length} chunks`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Document ${documentId} failed: ${message}`);
+      this.logger.error(
+        `Document ${documentId} failed: ${message}`,
+        err instanceof Error ? err.stack : undefined,
+      );
 
       await this.prisma.document.update({
         where: { id: documentId },
