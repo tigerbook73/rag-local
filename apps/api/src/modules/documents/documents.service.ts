@@ -106,7 +106,7 @@ export class DocumentsService {
 
     await this.prisma.document.update({
       where: { id },
-      data: { status: "pending", errorMessage: null },
+      data: { status: "pending", errorMessage: null, processedChunks: null },
     });
 
     const jobData: EmbeddingJobData = {

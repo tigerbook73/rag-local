@@ -1,6 +1,6 @@
 /**
  * @test-file   DocumentsService
- * @description unit tests for upload(), findOne(), remove(), and retry() with all dependencies mocked
+ * @description unit tests for upload(), findOne(), remove(), and retry() including processedChunks reset on retry
  * @ai-generated
  * @reviewed-by (!HUMAN EDIT ONLY):
  */
@@ -202,6 +202,7 @@ describe("DocumentsService — remove()", () => {
  *   - [FAIL] throws NotFoundException when document does not exist
  *   - [FAIL] throws BadRequestException when document status is not "failed"
  *   - [PASS] resets status to pending and enqueues job when document has failed status
+ *   - [PASS] resets processedChunks to null when retrying a failed document
  */
 describe("DocumentsService — retry()", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -236,7 +237,9 @@ describe("DocumentsService — retry()", () => {
     const result = await service.retry("doc-1");
 
     expect(mockPrisma.document.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: "pending", errorMessage: null } }),
+      expect.objectContaining({
+        data: { status: "pending", errorMessage: null, processedChunks: null },
+      }),
     );
     expect(mockQueue.add).toHaveBeenCalledWith(
       "embed",
@@ -244,5 +247,35 @@ describe("DocumentsService — retry()", () => {
       expect.any(Object),
     );
     expect(result).toEqual({ status: "pending" });
+  });
+
+  it("resets processedChunks to null when retrying a failed document", async () => {
+    const doc = {
+      id: "doc-2",
+      status: "failed",
+      storagePath: "path.md",
+      fileType: "md",
+      chunkingStrategy: "fixed",
+      chunkSize: 512,
+      chunkOverlap: 50,
+      processedChunks: 32,
+      totalChunks: 100,
+    };
+    mockPrisma.document.findUnique.mockResolvedValue(doc);
+    mockPrisma.document.update.mockResolvedValue({
+      ...doc,
+      status: "pending",
+      processedChunks: null,
+    });
+    mockQueue.add.mockResolvedValue({});
+
+    const service = await buildService();
+    await service.retry("doc-2");
+
+    expect(mockPrisma.document.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ processedChunks: null }),
+      }),
+    );
   });
 });

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Upload, Trash2, RefreshCw, FileText } from "lucide-react";
+import { Progress } from "@/components/ui/progress.js";
 import { listDocuments, uploadDocument, deleteDocument, retryDocument } from "../lib/api.js";
 import type { Document } from "../types/api.js";
 
@@ -176,6 +177,17 @@ function DocumentRow({
       <td className="px-4 py-3 text-muted-foreground uppercase text-xs">{doc.fileType}</td>
       <td className="px-4 py-3">
         <StatusBadge status={doc.status} />
+        {doc.status === "processing" && doc.totalChunks != null && (
+          <div className="mt-1 space-y-0.5">
+            <Progress
+              value={Math.round(((doc.processedChunks ?? 0) / doc.totalChunks) * 100)}
+              className="h-1 w-32"
+            />
+            <span className="text-xs text-muted-foreground">
+              {doc.processedChunks ?? 0}/{doc.totalChunks} chunks
+            </span>
+          </div>
+        )}
       </td>
       <td className="px-4 py-3 text-muted-foreground">{doc.totalChunks ?? "—"}</td>
       <td className="px-4 py-3 text-muted-foreground">
@@ -228,6 +240,17 @@ function DocumentCard({
         {doc.totalChunks != null && <span>{doc.totalChunks} chunks</span>}
         <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
       </div>
+      {doc.status === "processing" && doc.totalChunks != null && (
+        <div className="mt-2 space-y-0.5">
+          <Progress
+            value={Math.round(((doc.processedChunks ?? 0) / doc.totalChunks) * 100)}
+            className="h-1 w-full"
+          />
+          <span className="text-xs text-muted-foreground">
+            {doc.processedChunks ?? 0}/{doc.totalChunks} chunks
+          </span>
+        </div>
+      )}
       <div className="mt-3 flex gap-2 justify-end">
         {doc.status === "failed" && (
           <button
