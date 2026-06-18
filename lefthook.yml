@@ -21,7 +21,7 @@ pre-commit:
 pre-push:
   commands:
     verify:
-      run: "pnpm db:generate && pnpm gen:types && turbo lint typecheck build test && pnpm format && pnpm test:e2e"
+      run: "pnpm verify"
 
 commit-msg:
   commands:
