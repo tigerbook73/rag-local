@@ -1,5 +1,5 @@
 import type { EmbeddingService } from "../embedding/embedding.service.js";
-import type { LLMService } from "../llm/llm.service.js";
+import type { LLMProvider } from "../llm/llm.service.js";
 import type { RetrievedChunk } from "../types/retrieval.js";
 
 interface PrismaLike {
@@ -34,13 +34,17 @@ export class RetrievalService {
   constructor(
     private readonly embeddingService: EmbeddingService,
     private readonly prisma: PrismaLike,
-    private readonly llmService?: LLMService,
   ) {}
 
-  async retrieve(query: string, options: RetrievalOptions): Promise<RetrievalResult> {
+  async retrieve(
+    query: string,
+    options: RetrievalOptions,
+    llmProvider?: LLMProvider,
+  ): Promise<RetrievalResult> {
     const start = Date.now();
 
-    const embedText = options.hyde ? await this.generateHydeText(query) : query;
+    const embedText =
+      options.hyde && llmProvider ? await this.generateHydeText(query, llmProvider) : query;
     const embedding = await this.embeddingService.embed(embedText);
     const rows = await this.vectorSearch(embedding, options.topK);
 
@@ -60,10 +64,9 @@ export class RetrievalService {
     return { chunks, retrievalMs };
   }
 
-  private async generateHydeText(query: string): Promise<string> {
-    if (!this.llmService) return query;
+  private async generateHydeText(query: string, llmProvider: LLMProvider): Promise<string> {
     try {
-      return await this.llmService.chat([{ role: "user", content: `${HYDE_PROMPT}${query}` }]);
+      return await llmProvider.chat([{ role: "user", content: `${HYDE_PROMPT}${query}` }]);
     } catch {
       // Fall back to original query if LLM call fails
       return query;

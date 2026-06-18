@@ -16,12 +16,9 @@ import { EmbeddingService, LLMService, RetrievalService } from "@rag-local/core"
     LLMService,
     {
       provide: RetrievalService,
-      useFactory: (
-        embedding: EmbeddingService,
-        prisma: PrismaService,
-        llm: LLMService,
-      ): RetrievalService => new RetrievalService(embedding, prisma, llm),
-      inject: [EmbeddingService, PrismaService, LLMService],
+      useFactory: (embedding: EmbeddingService, prisma: PrismaService): RetrievalService =>
+        new RetrievalService(embedding, prisma),
+      inject: [EmbeddingService, PrismaService],
     },
   ],
   exports: [MessagesService],

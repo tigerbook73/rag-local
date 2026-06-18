@@ -7,14 +7,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RetrievalService } from "./retrieval.service.js";
 import type { EmbeddingService } from "../embedding/embedding.service.js";
-import type { LLMService } from "../llm/llm.service.js";
+import type { LLMProvider } from "../llm/llm.service.js";
 
 const mockEmbeddingService: Pick<EmbeddingService, "embed" | "rerank"> = {
   embed: vi.fn(),
   rerank: vi.fn(),
 };
 
-const mockLLMService: Pick<LLMService, "chat"> = {
+const mockLlmProvider: Pick<LLMProvider, "chat"> = {
   chat: vi.fn(),
 };
 
@@ -123,26 +123,29 @@ describe("RetrievalService — retrieve() basic vector search", () => {
 /**
  * @test-suite  RetrievalService — retrieve() HyDE path
  * @target      hypothetical document embedding when hyde is true
- * @strategy    unit, LLMService and EmbeddingService mocked
+ * @strategy    unit, LLMProvider and EmbeddingService mocked
  * @cases
- *   - [PASS] calls llmService.chat to generate hypothetical answer when hyde is true
+ *   - [PASS] calls llmProvider.chat to generate hypothetical answer when hyde is true
  *   - [PASS] embeds the hypothetical answer instead of the original query when hyde is true
- *   - [PASS] falls back to original query when llmService is not provided and hyde is true
+ *   - [PASS] falls back to original query when llmProvider is not provided and hyde is true
  */
 describe("RetrievalService — retrieve() HyDE path", () => {
-  it("calls llmService.chat to generate hypothetical answer when hyde is true", async () => {
-    vi.mocked(mockLLMService.chat).mockResolvedValue("Hypothetical answer about passwords");
+  it("calls llmProvider.chat to generate hypothetical answer when hyde is true", async () => {
+    vi.mocked(mockLlmProvider.chat).mockResolvedValue("Hypothetical answer about passwords");
     vi.mocked(mockEmbeddingService.embed).mockResolvedValue(FAKE_EMBEDDING);
     mockPrisma.$queryRawUnsafe.mockResolvedValue([]);
 
     const service = new RetrievalService(
       mockEmbeddingService as unknown as EmbeddingService,
       mockPrisma,
-      mockLLMService as unknown as LLMService,
     );
-    await service.retrieve("how to reset password?", { ...BASE_OPTIONS, hyde: true });
+    await service.retrieve(
+      "how to reset password?",
+      { ...BASE_OPTIONS, hyde: true },
+      mockLlmProvider as unknown as LLMProvider,
+    );
 
-    expect(mockLLMService.chat).toHaveBeenCalledWith(
+    expect(mockLlmProvider.chat).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
           role: "user",
@@ -153,21 +156,24 @@ describe("RetrievalService — retrieve() HyDE path", () => {
   });
 
   it("embeds the hypothetical answer instead of the original query when hyde is true", async () => {
-    vi.mocked(mockLLMService.chat).mockResolvedValue("Hypothetical answer about passwords");
+    vi.mocked(mockLlmProvider.chat).mockResolvedValue("Hypothetical answer about passwords");
     vi.mocked(mockEmbeddingService.embed).mockResolvedValue(FAKE_EMBEDDING);
     mockPrisma.$queryRawUnsafe.mockResolvedValue([]);
 
     const service = new RetrievalService(
       mockEmbeddingService as unknown as EmbeddingService,
       mockPrisma,
-      mockLLMService as unknown as LLMService,
     );
-    await service.retrieve("how to reset password?", { ...BASE_OPTIONS, hyde: true });
+    await service.retrieve(
+      "how to reset password?",
+      { ...BASE_OPTIONS, hyde: true },
+      mockLlmProvider as unknown as LLMProvider,
+    );
 
     expect(mockEmbeddingService.embed).toHaveBeenCalledWith("Hypothetical answer about passwords");
   });
 
-  it("falls back to original query when llmService is not provided and hyde is true", async () => {
+  it("falls back to original query when llmProvider is not provided and hyde is true", async () => {
     vi.mocked(mockEmbeddingService.embed).mockResolvedValue(FAKE_EMBEDDING);
     mockPrisma.$queryRawUnsafe.mockResolvedValue([]);
 

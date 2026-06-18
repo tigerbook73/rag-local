@@ -5,8 +5,6 @@ import { SETTINGS_KEYS, SETTINGS_DEFAULTS } from "./settings.constants.js";
 
 export interface AppSettings {
   llmProvider: "openai" | "deepseek";
-  llmModel: string;
-  llmBaseUrl: string | null;
   chunkingStrategy: "fixed" | "semantic";
   chunkSize: number;
   chunkOverlap: number;
@@ -16,11 +14,6 @@ export interface AppSettings {
   onlineEvaluationEnabled: boolean;
   conversationHistoryWindow: number;
 }
-
-const PROVIDER_CONFIG: Record<"openai" | "deepseek", { model: string; baseUrl: string | null }> = {
-  deepseek: { model: "deepseek-chat", baseUrl: "https://api.deepseek.com" },
-  openai: { model: "gpt-4o", baseUrl: null },
-};
 
 const STATIC_KEYS = [
   SETTINGS_KEYS.CHUNKING_STRATEGY,
@@ -43,13 +36,8 @@ export class SettingsService {
     const kv: Record<string, string> = { ...SETTINGS_DEFAULTS };
     for (const row of rows) kv[row.key] = row.value;
 
-    const llmProvider = kv[SETTINGS_KEYS.LLM_PROVIDER] as "openai" | "deepseek";
-    const { model: llmModel, baseUrl: llmBaseUrl } = PROVIDER_CONFIG[llmProvider];
-
     return {
-      llmProvider,
-      llmModel,
-      llmBaseUrl,
+      llmProvider: kv[SETTINGS_KEYS.LLM_PROVIDER] as "openai" | "deepseek",
       chunkingStrategy: kv[SETTINGS_KEYS.CHUNKING_STRATEGY] as "fixed" | "semantic",
       chunkSize: parseInt(kv[SETTINGS_KEYS.CHUNK_SIZE]!),
       chunkOverlap: parseInt(kv[SETTINGS_KEYS.CHUNK_OVERLAP]!),

@@ -1,6 +1,6 @@
 /**
  * @test-file   Settings API
- * @description e2e tests for GET /settings and PATCH /settings (requires API running)
+ * @description e2e tests for GET /settings and PATCH /settings; llmModel removed from response shape
  * @ai-generated
  * @reviewed-by (!HUMAN EDIT ONLY):
  */
@@ -25,7 +25,6 @@ test.describe("GET /settings", () => {
 
     expect(body).toMatchObject({
       llmProvider: expect.stringMatching(/^(openai|deepseek)$/),
-      llmModel: expect.any(String),
       chunkingStrategy: expect.stringMatching(/^(fixed|semantic)$/),
       chunkSize: expect.any(Number),
       chunkOverlap: expect.any(Number),

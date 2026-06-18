@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { updateMessageFeedback } from "@/lib/api";
 import type { Message, RetrievedChunk } from "../../types/index.js";
 
 export function MessageBubble({ message }: { message: Message }) {
@@ -14,10 +16,64 @@ export function MessageBubble({ message }: { message: Message }) {
         >
           {message.content}
         </div>
-        {!isUser && message.retrievedChunks && message.retrievedChunks.length > 0 && (
-          <SourcesSection chunks={message.retrievedChunks} />
+        {!isUser && (
+          <div className="flex items-center gap-1 mt-1">
+            {message.retrievedChunks && message.retrievedChunks.length > 0 && (
+              <SourcesSection chunks={message.retrievedChunks} />
+            )}
+            <div className="ml-auto">
+              <FeedbackButtons messageId={message.id} initialFeedback={message.feedback} />
+            </div>
+          </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function FeedbackButtons({
+  messageId,
+  initialFeedback,
+}: {
+  messageId: string;
+  initialFeedback?: "positive" | "negative" | null;
+}) {
+  const [feedback, setFeedback] = useState<"positive" | "negative" | null>(initialFeedback ?? null);
+  const [pending, setPending] = useState(false);
+
+  async function handleFeedback(value: "positive" | "negative") {
+    if (pending || feedback === value) return;
+    setPending(true);
+    try {
+      await updateMessageFeedback(messageId, value);
+      setFeedback(value);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-0.5">
+      <Button
+        size="icon"
+        variant="ghost"
+        className={`h-6 w-6 ${feedback === "positive" ? "text-green-600" : "text-muted-foreground"}`}
+        disabled={pending}
+        onClick={() => void handleFeedback("positive")}
+        aria-label="thumbs up"
+      >
+        <ThumbsUp className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        className={`h-6 w-6 ${feedback === "negative" ? "text-red-500" : "text-muted-foreground"}`}
+        disabled={pending}
+        onClick={() => void handleFeedback("negative")}
+        aria-label="thumbs down"
+      >
+        <ThumbsDown className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }

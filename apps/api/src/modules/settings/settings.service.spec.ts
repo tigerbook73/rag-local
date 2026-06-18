@@ -30,8 +30,6 @@ async function buildService() {
  * @cases
  *   - [PASS] returns all default values when DB has no rows
  *   - [PASS] DB rows override default values
- *   - [PASS] derives deepseek model and baseUrl from PROVIDER_CONFIG
- *   - [PASS] derives openai model and null baseUrl from PROVIDER_CONFIG
  *   - [PASS] parses integer settings from string DB values
  *   - [PASS] parses boolean settings from string DB values
  */
@@ -64,28 +62,6 @@ describe("SettingsService — getSettings()", () => {
 
     expect(settings.topK).toBe(10);
     expect(settings.chunkSize).toBe(1024);
-  });
-
-  it("derives deepseek model and baseUrl from PROVIDER_CONFIG", async () => {
-    mockPrisma.setting.findMany.mockResolvedValue([
-      { key: SETTINGS_KEYS.LLM_PROVIDER, value: "deepseek" },
-    ]);
-    const service = await buildService();
-    const settings = await service.getSettings();
-
-    expect(settings.llmModel).toBe("deepseek-chat");
-    expect(settings.llmBaseUrl).toBe("https://api.deepseek.com");
-  });
-
-  it("derives openai model and null baseUrl from PROVIDER_CONFIG", async () => {
-    mockPrisma.setting.findMany.mockResolvedValue([
-      { key: SETTINGS_KEYS.LLM_PROVIDER, value: "openai" },
-    ]);
-    const service = await buildService();
-    const settings = await service.getSettings();
-
-    expect(settings.llmModel).toBe("gpt-4o");
-    expect(settings.llmBaseUrl).toBeNull();
   });
 
   it("parses integer settings from string DB values", async () => {

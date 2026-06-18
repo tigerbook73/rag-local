@@ -9,7 +9,7 @@ export type { ChunkResult, ChunkingStrategy } from "./chunking/strategy.js";
 export { EmbeddingService } from "./embedding/embedding.service.js";
 
 export { LLMService } from "./llm/llm.service.js";
-export type { LLMMessage, LLMConfig } from "./llm/llm.service.js";
+export type { LLMMessage, LLMConfig, LLMProvider } from "./llm/llm.service.js";
 
 export { RetrievalService } from "./retrieval/retrieval.service.js";
 export type { RetrievalOptions, RetrievalResult } from "./retrieval/retrieval.service.js";

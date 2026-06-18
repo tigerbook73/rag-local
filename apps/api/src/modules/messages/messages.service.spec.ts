@@ -1,6 +1,6 @@
 /**
  * @test-file   MessagesService
- * @description unit tests for streamChat history injection and findAll
+ * @description unit tests for streamChat history injection, retrieval options, and findAll
  * @ai-generated
  * @reviewed-by (!HUMAN EDIT ONLY):
  */
@@ -9,7 +9,7 @@ import { Test } from "@nestjs/testing";
 import { MessagesService } from "./messages.service.js";
 import { PrismaService } from "../../common/prisma.service.js";
 import { SettingsService } from "../settings/settings.service.js";
-import { EmbeddingService, LLMService, RetrievalService } from "@rag-local/core";
+import { LLMService, RetrievalService } from "@rag-local/core";
 import type { Response } from "express";
 
 // ── mocks ─────────────────────────────────────────────────────────────────────
@@ -21,13 +21,14 @@ const mockPrisma = {
 };
 
 const mockSettingsService = { getSettings: vi.fn() };
-const mockEmbeddingService = {};
-const mockLlmService = { stream: vi.fn() };
+
+const mockLlmProvider = { stream: vi.fn() };
+const mockLlmService = { getProvider: vi.fn(() => mockLlmProvider) };
+
 const mockRetrievalService = { retrieve: vi.fn() };
 
 const DEFAULT_SETTINGS = {
   llmProvider: "deepseek",
-  llmModel: "deepseek-chat",
   conversationHistoryWindow: 2,
   topK: 5,
   hydeEnabled: false,
@@ -44,7 +45,6 @@ async function buildService() {
       MessagesService,
       { provide: PrismaService, useValue: mockPrisma },
       { provide: SettingsService, useValue: mockSettingsService },
-      { provide: EmbeddingService, useValue: mockEmbeddingService },
       { provide: LLMService, useValue: mockLlmService },
       { provide: RetrievalService, useValue: mockRetrievalService },
     ],
@@ -63,7 +63,7 @@ function setupHappyPath(historyMessages: { role: string; content: string }[] = [
   mockPrisma.message.create.mockResolvedValue({ id: "msg-new" });
   mockPrisma.promptTemplate.findFirst.mockResolvedValue(null);
   mockRetrievalService.retrieve.mockResolvedValue({ chunks: [], retrievalMs: 5 });
-  mockLlmService.stream.mockImplementation(function* () {
+  mockLlmProvider.stream.mockImplementation(function* () {
     yield "Hello";
     yield " world";
   });
@@ -142,7 +142,7 @@ describe("MessagesService.streamChat", () => {
     const svc = await buildService();
     await svc.streamChat("conv-1", { content: "follow-up" }, makeRes());
 
-    const streamArgs = mockLlmService.stream.mock.calls[0]![0] as Array<{
+    const streamArgs = mockLlmProvider.stream.mock.calls[0]![0] as Array<{
       role: string;
       content: string;
     }>;
@@ -175,7 +175,7 @@ describe("MessagesService.streamChat", () => {
     mockPrisma.message.create.mockResolvedValue({ id: "msg-new" });
     mockPrisma.promptTemplate.findFirst.mockResolvedValue(null);
     mockRetrievalService.retrieve.mockResolvedValue({ chunks: [], retrievalMs: 5 });
-    mockLlmService.stream.mockImplementation(function* () {
+    mockLlmProvider.stream.mockImplementation(function* () {
       yield "ok";
     });
 
@@ -185,6 +185,7 @@ describe("MessagesService.streamChat", () => {
     expect(mockRetrievalService.retrieve).toHaveBeenCalledWith(
       "q",
       expect.objectContaining({ hyde: true, reranking: true }),
+      expect.anything(),
     );
   });
 
@@ -197,7 +198,7 @@ describe("MessagesService.streamChat", () => {
     mockPrisma.message.create.mockResolvedValue({ id: "msg-new" });
     mockPrisma.promptTemplate.findFirst.mockResolvedValue(null);
     mockRetrievalService.retrieve.mockResolvedValue({ chunks: [], retrievalMs: 5 });
-    mockLlmService.stream.mockImplementation(function* () {
+    mockLlmProvider.stream.mockImplementation(function* () {
       yield "ok";
     });
 

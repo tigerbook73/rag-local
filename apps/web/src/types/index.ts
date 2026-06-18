@@ -14,6 +14,7 @@ export type RetrievedChunk = components["schemas"]["RetrievedChunkResponseDto"];
 export type RetrievedChunkResponse = components["schemas"]["RetrievedChunkResponseDto"];
 export type Settings = components["schemas"]["AppSettingsResponseDto"];
 export type SettingsResponse = components["schemas"]["AppSettingsResponseDto"];
+export type PromptTemplate = components["schemas"]["PromptTemplateResponseDto"];
 
 export interface LatencyInfo {
   ttftMs: number;

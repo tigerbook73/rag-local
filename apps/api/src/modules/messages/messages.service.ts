@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Response } from "express";
 import { PrismaService } from "../../common/prisma.service.js";
 import { SettingsService } from "../settings/settings.service.js";
-import { EmbeddingService, LLMService, RetrievalService, type LLMMessage } from "@rag-local/core";
+import { LLMService, RetrievalService, type LLMMessage } from "@rag-local/core";
 import { Prisma } from "@rag-local/db";
 import type { SendMessageDto } from "./dto/send-message.dto.js";
 import type { UpdateFeedbackDto } from "./dto/update-feedback.dto.js";
@@ -18,7 +18,6 @@ export class MessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settingsService: SettingsService,
-    private readonly embeddingService: EmbeddingService,
     private readonly llmService: LLMService,
     private readonly retrievalService: RetrievalService,
   ) {}
@@ -45,6 +44,7 @@ export class MessagesService {
     };
 
     try {
+      const llmProvider = this.llmService.getProvider({ provider: settings.llmProvider });
       // Fetch conversation history before saving current user message
       const historyCount = settings.conversationHistoryWindow * 2;
       const historyRows =
@@ -68,11 +68,15 @@ export class MessagesService {
       });
 
       // Retrieve relevant chunks
-      const { chunks, retrievalMs } = await this.retrievalService.retrieve(dto.content, {
-        topK: settings.topK,
-        hyde: settings.hydeEnabled,
-        reranking: settings.rerankingEnabled,
-      });
+      const { chunks, retrievalMs } = await this.retrievalService.retrieve(
+        dto.content,
+        {
+          topK: settings.topK,
+          hyde: settings.hydeEnabled,
+          reranking: settings.rerankingEnabled,
+        },
+        llmProvider,
+      );
 
       // Build prompt
       const activeTemplate = await this.prisma.promptTemplate.findFirst({
@@ -100,7 +104,7 @@ export class MessagesService {
       let ttftMs: number | null = null;
       const startMs = Date.now();
 
-      for await (const token of this.llmService.stream(messages)) {
+      for await (const token of llmProvider.stream(messages)) {
         if (ttftMs === null) ttftMs = Date.now() - startMs;
         fullContent += token;
         emit("delta", { content: token });
@@ -125,7 +129,7 @@ export class MessagesService {
       emit("done", { messageId: assistantMsg.id, retrievedChunks: chunks, latency });
     } catch (err) {
       this.logger.error(
-        `streamChat failed [${settings.llmProvider}/${settings.llmModel}] conv=${conversationId}: ${err instanceof Error ? err.message : String(err)}`,
+        `streamChat failed [${settings.llmProvider}] conv=${conversationId}: ${err instanceof Error ? err.message : String(err)}`,
         err instanceof Error ? err.stack : undefined,
       );
       throw err;

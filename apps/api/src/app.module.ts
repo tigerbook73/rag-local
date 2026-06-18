@@ -10,6 +10,7 @@ import { DocumentsModule } from "./modules/documents/documents.module.js";
 import { ConversationsModule } from "./modules/conversations/conversations.module.js";
 import { MessagesModule } from "./modules/messages/messages.module.js";
 import { SettingsModule } from "./modules/settings/settings.module.js";
+import { PromptTemplatesModule } from "./modules/prompt-templates/prompt-templates.module.js";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SettingsModule } from "./modules/settings/settings.module.js";
     DocumentsModule,
     ConversationsModule,
     MessagesModule,
+    PromptTemplatesModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],
