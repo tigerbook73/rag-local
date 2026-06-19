@@ -79,6 +79,7 @@ model Message {
   content         String
   feedback        MessageFeedback?
   retrievedChunks Json?            @map("retrieved_chunks")
+  prompt          String?          // Serialized LLMMessage[] JSON for observability
   ttftMs          Int?             @map("ttft_ms")
   totalMs         Int?             @map("total_ms")
   retrievalMs     Int?             @map("retrieval_ms")
@@ -107,6 +108,7 @@ model Document {
   processingStartedAt   DateTime?        @map("processing_started_at") @db.Timestamptz
   processingCompletedAt DateTime?        @map("processing_completed_at") @db.Timestamptz
   createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  beirSource            String?          @map("beir_source") // BEIR dataset name if injected
   chunks                Chunk[]
 
   @@map("documents")
@@ -142,6 +144,98 @@ model Evaluation {
 
   @@index([messageId])
   @@map("evaluations")
+}
+
+// ── BEIR Evaluation ──────────────────────────────────────────────────
+
+model BeirCorpus {
+  id        String            @id @default(uuid()) @db.Uuid
+  dataset   String
+  beirDocId String            @map("beir_doc_id")
+  title     String?
+  text      String
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  chunks    BeirCorpusChunk[]
+
+  @@unique([dataset, beirDocId])
+  @@index([dataset])
+  @@map("beir_corpus")
+}
+
+model BeirCorpusChunk {
+  id             String                @id @default(uuid()) @db.Uuid
+  corpusId       String                @map("corpus_id") @db.Uuid
+  chunkIndex     Int                   @map("chunk_index")
+  startOffset    Int                   @map("start_offset")
+  content        String
+  chunkingConfig String                @map("chunking_config")
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  corpus         BeirCorpus            @relation(fields: [corpusId], references: [id], onDelete: Cascade)
+  embeddings     BeirCorpusEmbedding[]
+
+  @@unique([corpusId, startOffset, chunkingConfig])
+  @@index([corpusId, chunkingConfig])
+  @@map("beir_corpus_chunks")
+}
+
+model BeirCorpusEmbedding {
+  id        String                     @id @default(uuid()) @db.Uuid
+  chunkId   String                     @map("chunk_id") @db.Uuid
+  model     String
+  embedding Unsupported("vector(1024)")
+  createdAt DateTime                   @default(now()) @map("created_at") @db.Timestamptz
+  chunk     BeirCorpusChunk            @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@unique([chunkId, model])
+  @@index([model])
+  @@map("beir_corpus_embeddings")
+}
+
+model BeirQuery {
+  id          String @id @default(uuid()) @db.Uuid
+  dataset     String
+  beirQueryId String @map("beir_query_id")
+  text        String
+
+  @@unique([dataset, beirQueryId])
+  @@map("beir_queries")
+}
+
+model BeirQrel {
+  dataset   String
+  queryId   String @map("query_id")
+  docId     String @map("doc_id")
+  relevance Int
+
+  @@id([dataset, queryId, docId])
+  @@map("beir_qrels")
+}
+
+model BeirEvalRun {
+  id              String              @id @default(uuid()) @db.Uuid
+  dataset         String
+  embeddingConfig String              @map("embedding_config")
+  sampleSize      Int                 @map("sample_size")
+  metrics         Json
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  queryDetails    BeirEvalRunDetail[]
+
+  @@index([dataset, createdAt])
+  @@map("beir_eval_runs")
+}
+
+model BeirEvalRunDetail {
+  id              String      @id @default(uuid()) @db.Uuid
+  runId           String      @map("run_id") @db.Uuid
+  queryId         String      @map("query_id")
+  queryText       String      @map("query_text")
+  hits            Json
+  ndcg10          Decimal     @map("ndcg10") @db.Decimal(5, 4)
+  relevantInTop10 Int         @map("relevant_in_top10")
+  run             BeirEvalRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@map("beir_eval_run_details")
 }
 
 // ── Prompt Templates ─────────────────────────────────────────────────

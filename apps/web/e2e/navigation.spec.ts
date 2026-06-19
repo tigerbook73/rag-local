@@ -64,18 +64,18 @@ test.describe("Navigation — /history", () => {
 
 /**
  * @test-suite  Navigation — /quality
- * @target      QualityPage renders coming-soon placeholder without JS errors
+ * @target      QualityPage renders without JS errors
  * @strategy    e2e, browser workflow
  * @cases
- *   - [PASS] shows coming-soon text without JS errors when navigating to /quality
+ *   - [PASS] shows 质量评估 heading without JS errors when navigating to /quality
  */
 test.describe("Navigation — /quality", () => {
-  test("shows coming-soon text without JS errors when navigating to /quality", async ({ page }) => {
+  test("shows 质量评估 heading without JS errors when navigating to /quality", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(err.message));
 
     await page.goto("/quality");
-    await expect(page.getByText("coming soon")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "质量评估" })).toBeVisible();
     expect(errors).toHaveLength(0);
   });
 });

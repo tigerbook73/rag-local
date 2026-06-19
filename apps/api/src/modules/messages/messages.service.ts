@@ -1,8 +1,16 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { InjectQueue } from "@nestjs/bullmq";
+import type { Queue } from "bullmq";
 import type { Response } from "express";
 import { PrismaService } from "../../common/prisma.service.js";
 import { SettingsService } from "../settings/settings.service.js";
-import { LLMService, RetrievalService, type LLMMessage } from "@rag-local/core";
+import {
+  LLMService,
+  RetrievalService,
+  QUEUE_NAMES,
+  type LLMMessage,
+  type EvaluationJobData,
+} from "@rag-local/core";
 import { Prisma } from "@rag-local/db";
 import type { SendMessageDto } from "./dto/send-message.dto.js";
 import type { UpdateFeedbackDto } from "./dto/update-feedback.dto.js";
@@ -20,6 +28,7 @@ export class MessagesService {
     private readonly settingsService: SettingsService,
     private readonly llmService: LLMService,
     private readonly retrievalService: RetrievalService,
+    @InjectQueue(QUEUE_NAMES.EVALUATION) private readonly evalQueue: Queue,
   ) {}
 
   async findAll(conversationId: string) {
@@ -112,18 +121,33 @@ export class MessagesService {
 
       const totalMs = Date.now() - startMs;
 
-      // Save assistant message with retrieved chunks snapshot
+      // Save assistant message with retrieved chunks snapshot and prompt for observability
       const assistantMsg = await this.prisma.message.create({
         data: {
           conversationId,
           role: "assistant",
           content: fullContent,
           retrievedChunks: chunks as unknown as Prisma.InputJsonValue,
+          prompt: JSON.stringify(messages),
           ttftMs: ttftMs ?? 0,
           totalMs,
           retrievalMs,
         },
       });
+
+      if (settings.onlineEvaluationEnabled) {
+        await this.evalQueue.add(
+          "evaluate",
+          {
+            messageId: assistantMsg.id,
+            question: dto.content,
+            answer: fullContent,
+            retrievedChunks: chunks,
+          } satisfies EvaluationJobData,
+          { attempts: 2, backoff: { type: "exponential", delay: 3000 } },
+        );
+        this.logger.debug(`Evaluation job queued for message ${assistantMsg.id}`);
+      }
 
       const latency = { ttftMs: ttftMs ?? 0, totalMs, retrievalMs };
       emit("done", { messageId: assistantMsg.id, retrievedChunks: chunks, latency });
