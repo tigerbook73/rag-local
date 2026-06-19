@@ -21,6 +21,7 @@ CREATE TABLE "beir_corpus_chunks" (
     "id" UUID NOT NULL,
     "corpus_id" UUID NOT NULL,
     "chunk_index" INTEGER NOT NULL,
+    "start_offset" INTEGER NOT NULL,
     "content" TEXT NOT NULL,
     "chunking_config" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -94,7 +95,7 @@ CREATE UNIQUE INDEX "beir_corpus_dataset_beir_doc_id_key" ON "beir_corpus"("data
 CREATE INDEX "beir_corpus_chunks_corpus_id_chunking_config_idx" ON "beir_corpus_chunks"("corpus_id", "chunking_config");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "beir_corpus_chunks_corpus_id_chunk_index_chunking_config_key" ON "beir_corpus_chunks"("corpus_id", "chunk_index", "chunking_config");
+CREATE UNIQUE INDEX "beir_corpus_chunks_corpus_id_start_offset_chunking_config_key" ON "beir_corpus_chunks"("corpus_id", "start_offset", "chunking_config");
 
 -- CreateIndex
 CREATE INDEX "beir_corpus_embeddings_model_idx" ON "beir_corpus_embeddings"("model");
