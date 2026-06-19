@@ -84,7 +84,10 @@ export async function cmdEmbed(opts: EmbedOptions): Promise<void> {
       const batch = chunks.slice(i, i + batchSize);
       const embeddings = await embeddingService.embedBatch(batch.map((c) => c.content));
       const placeholders = batch
-        .map((_, j) => `(gen_random_uuid(), $${j * 3 + 1}::uuid, $${j * 3 + 2}, $${j * 3 + 3}::vector)`)
+        .map(
+          (_, j) =>
+            `(gen_random_uuid(), $${j * 3 + 1}::uuid, $${j * 3 + 2}, $${j * 3 + 3}::vector)`,
+        )
         .join(", ");
       const params: string[] = batch.flatMap((c, j) => [c.id, model, vecStr(embeddings[j]!)]);
       await prisma.$executeRawUnsafe(

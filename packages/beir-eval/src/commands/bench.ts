@@ -18,9 +18,28 @@ interface BenchResult {
 /** Generate deterministic fake text of roughly `length` chars */
 function makeSample(length: number, seed: number): string {
   const words = [
-    "the", "scientific", "evidence", "suggests", "that", "protein", "expression",
-    "in", "cancer", "cells", "may", "vary", "depending", "on", "environmental",
-    "factors", "such", "as", "temperature", "and", "chemical", "composition",
+    "the",
+    "scientific",
+    "evidence",
+    "suggests",
+    "that",
+    "protein",
+    "expression",
+    "in",
+    "cancer",
+    "cells",
+    "may",
+    "vary",
+    "depending",
+    "on",
+    "environmental",
+    "factors",
+    "such",
+    "as",
+    "temperature",
+    "and",
+    "chemical",
+    "composition",
   ];
   let text = "";
   let i = seed;
@@ -39,7 +58,9 @@ export async function cmdBench(opts: BenchOptions): Promise<void> {
 
   const samples = Array.from({ length: sampleSize }, (_, i) => makeSample(chunkSize, i));
 
-  console.log(`[bench] sidecar: ${process.env["EMBEDDING_SERVICE_URL"] ?? "http://localhost:8000"}`);
+  console.log(
+    `[bench] sidecar: ${process.env["EMBEDDING_SERVICE_URL"] ?? "http://localhost:8000"}`,
+  );
   console.log(`[bench] sample_size=${sampleSize}  chunk_chars=${chunkSize}  rounds=${rounds}`);
 
   // Warmup
@@ -80,7 +101,13 @@ export async function cmdBench(opts: BenchOptions): Promise<void> {
     process.stdout.write("\r" + " ".repeat(30) + "\r");
 
     if (errorMsg || timings.length === 0) {
-      const result: BenchResult = { batchSize, throughput: 0, latencyMs: 0, totalMs: 0, error: errorMsg ?? "no timings" };
+      const result: BenchResult = {
+        batchSize,
+        throughput: 0,
+        latencyMs: 0,
+        totalMs: 0,
+        error: errorMsg ?? "no timings",
+      };
       results.push(result);
       console.log(
         `${String(batchSize).padEnd(8)} ${"ERROR".padStart(10)} ${"".padStart(10)} ${"".padStart(12)}  ← ${result.error}`,
@@ -106,5 +133,7 @@ export async function cmdBench(opts: BenchOptions): Promise<void> {
   }
 
   const best = successful.reduce((a, b) => (a.throughput > b.throughput ? a : b));
-  console.log(`\n[bench] recommended --batch-size ${best.batchSize}  (${best.throughput.toFixed(1)} chunks/s)`);
+  console.log(
+    `\n[bench] recommended --batch-size ${best.batchSize}  (${best.throughput.toFixed(1)} chunks/s)`,
+  );
 }
