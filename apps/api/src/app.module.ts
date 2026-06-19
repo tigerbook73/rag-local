@@ -11,6 +11,7 @@ import { ConversationsModule } from "./modules/conversations/conversations.modul
 import { MessagesModule } from "./modules/messages/messages.module.js";
 import { SettingsModule } from "./modules/settings/settings.module.js";
 import { PromptTemplatesModule } from "./modules/prompt-templates/prompt-templates.module.js";
+import { QualityModule } from "./modules/quality/quality.module.js";
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PromptTemplatesModule } from "./modules/prompt-templates/prompt-templat
     ConversationsModule,
     MessagesModule,
     PromptTemplatesModule,
+    QualityModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],
