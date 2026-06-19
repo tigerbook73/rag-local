@@ -8,6 +8,7 @@ import { cmdList } from "./commands/list.js";
 import { cmdStatus } from "./commands/status.js";
 import { cmdBackup } from "./commands/backup.js";
 import { cmdRestore } from "./commands/restore.js";
+import { cmdClean } from "./commands/clean.js";
 
 const DEFAULT_MODEL = "bge-m3";
 const DEFAULT_STRATEGY = "fixed" as const;
@@ -49,6 +50,14 @@ program
   .option("--input <dir>", "Input directory", "./beir-backup")
   .action(async (opts: { dataset: string; input: string }) => {
     await cmdRestore(opts);
+  });
+
+program
+  .command("clean")
+  .description("Delete all BEIR data for a dataset (corpus, chunks, embeddings, eval runs)")
+  .requiredOption("--dataset <name>", "BEIR dataset name")
+  .action(async (opts: { dataset: string }) => {
+    await cmdClean(opts.dataset);
   });
 
 program

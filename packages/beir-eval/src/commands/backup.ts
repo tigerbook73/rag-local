@@ -29,6 +29,8 @@ async function closeStream(stream: ReturnType<typeof createWriteStream>): Promis
 
 export async function cmdBackup({ dataset, output }: BackupOptions): Promise<void> {
   const dir = path.join(output, dataset);
+  let failed = false;
+  try {
   await mkdir(dir, { recursive: true });
   console.log(`[backup] dataset=${dataset}  output=${dir}`);
 
@@ -136,5 +138,11 @@ export async function cmdBackup({ dataset, output }: BackupOptions): Promise<voi
   }
 
   console.log("[backup] done.");
-  await prisma.$disconnect();
+  } catch (err) {
+    console.error(`[backup] ${err instanceof Error ? err.message : String(err)}`);
+    failed = true;
+  } finally {
+    await prisma.$disconnect();
+  }
+  if (failed) process.exit(1);
 }
