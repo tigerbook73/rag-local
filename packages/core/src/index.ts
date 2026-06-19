@@ -18,3 +18,6 @@ export type { RetrievedChunk, LatencyInfo } from "./types/retrieval.js";
 export type { EmbeddingJobData, EvaluationJobData } from "./types/jobs.js";
 export { QUEUE_NAMES } from "./types/jobs.js";
 export { parseRedisUrl, getRedisKeyPrefix } from "./config/redis.js";
+
+export { EvaluationService } from "./evaluation/evaluation.service.js";
+export type { EvaluationInput, MetricResult } from "./evaluation/evaluation.service.js";

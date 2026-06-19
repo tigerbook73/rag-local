@@ -226,6 +226,54 @@ export interface paths {
         patch: operations["PromptTemplatesController_update"];
         trace?: never;
     };
+    "/api/v1/quality/evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["QualityController_listEvaluations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quality/beir-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["QualityController_listBeirRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quality/beir-runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["QualityController_getBeirRunDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -376,6 +424,62 @@ export interface components {
             name?: string;
             content?: string;
             isActive?: boolean;
+        };
+        EvaluationMetricDto: {
+            /** @enum {string} */
+            metric: "faithfulness" | "answer_relevancy" | "context_precision";
+            score: number;
+            reason: string | null;
+        };
+        EvaluationSummaryDto: {
+            messageId: string;
+            conversationId: string;
+            conversationTitle?: string;
+            question?: string;
+            evaluations: components["schemas"]["EvaluationMetricDto"][];
+            createdAt: string;
+        };
+        EvaluationListResponseDto: {
+            data: components["schemas"]["EvaluationSummaryDto"][];
+            total: number;
+        };
+        BeirMetricsDto: {
+            ndcg10: number;
+            recall10: number;
+            recall100: number;
+            mrr10: number;
+        };
+        BeirEvalRunSummaryDto: {
+            id: string;
+            dataset: string;
+            embeddingConfig: string;
+            sampleSize: number;
+            metrics: components["schemas"]["BeirMetricsDto"];
+            createdAt: string;
+        };
+        BeirRunListResponseDto: {
+            data: components["schemas"]["BeirEvalRunSummaryDto"][];
+            total: number;
+        };
+        BeirHitDto: {
+            docId: string;
+            score: number;
+        };
+        BeirQueryDetailDto: {
+            queryId: string;
+            queryText: string;
+            hits: components["schemas"]["BeirHitDto"][];
+            relevantInTop10: number;
+            ndcg10: number;
+        };
+        BeirEvalRunDetailDto: {
+            id: string;
+            dataset: string;
+            embeddingConfig: string;
+            sampleSize: number;
+            metrics: components["schemas"]["BeirMetricsDto"];
+            details: components["schemas"]["BeirQueryDetailDto"][];
+            createdAt: string;
         };
     };
     responses: never;
@@ -834,6 +938,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PromptTemplateResponseDto"];
+                };
+            };
+        };
+    };
+    QualityController_listEvaluations: {
+        parameters: {
+            query?: {
+                conversationId?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationListResponseDto"];
+                };
+            };
+        };
+    };
+    QualityController_listBeirRuns: {
+        parameters: {
+            query?: {
+                dataset?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BeirRunListResponseDto"];
+                };
+            };
+        };
+    };
+    QualityController_getBeirRunDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BeirEvalRunDetailDto"];
                 };
             };
         };

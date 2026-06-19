@@ -1,5 +1,5 @@
 import createClient from "openapi-fetch";
-import type { paths, components } from "../types/generated/api.js";
+import type { paths, components, operations } from "../types/generated/api.js";
 import type {
   Conversation,
   Document,
@@ -236,6 +236,43 @@ export async function getEvaluation(
   id: string,
 ): Promise<components["schemas"]["EvaluationResponseDto"]> {
   const { data, error } = await apiClient.GET("/api/v1/messages/{id}/evaluation", {
+    params: { path: { id } },
+  });
+  if (error) throwOnError(error);
+  return data;
+}
+
+// ── Quality ──────────────────────────────────────────────────────────
+
+export type EvaluationSummary = components["schemas"]["EvaluationSummaryDto"];
+export type BeirEvalRunSummary = components["schemas"]["BeirEvalRunSummaryDto"];
+export type BeirEvalRunDetail = components["schemas"]["BeirEvalRunDetailDto"];
+export type BeirMetrics = components["schemas"]["BeirMetricsDto"];
+
+export async function listEvaluations(
+  params?: operations["QualityController_listEvaluations"]["parameters"]["query"],
+): Promise<components["schemas"]["EvaluationListResponseDto"]> {
+  const { data, error } = await apiClient.GET("/api/v1/quality/evaluations", {
+    params: { query: params },
+  });
+  if (error) throwOnError(error);
+  return data;
+}
+
+export async function listBeirRuns(
+  params?: operations["QualityController_listBeirRuns"]["parameters"]["query"],
+): Promise<components["schemas"]["BeirRunListResponseDto"]> {
+  const { data, error } = await apiClient.GET("/api/v1/quality/beir-runs", {
+    params: { query: params },
+  });
+  if (error) throwOnError(error);
+  return data;
+}
+
+export async function getBeirRunDetail(
+  id: string,
+): Promise<components["schemas"]["BeirEvalRunDetailDto"]> {
+  const { data, error } = await apiClient.GET("/api/v1/quality/beir-runs/{id}", {
     params: { path: { id } },
   });
   if (error) throwOnError(error);

@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Send, Plus } from "lucide-react";
-import { createConversation, listMessages, streamChat, updateConversation } from "../lib/api.js";
+import {
+  createConversation,
+  getSettings,
+  listMessages,
+  streamChat,
+  updateConversation,
+} from "../lib/api.js";
 import { useConversationStore } from "../stores/conversation.store.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { Button } from "@/components/ui/button";
@@ -23,6 +30,9 @@ export function ChatPage() {
     appendStreamToken,
     finalizeStream,
   } = useConversationStore();
+
+  const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
+  const showEvaluation = settings?.onlineEvaluationEnabled ?? false;
 
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +126,7 @@ export function ChatPage() {
         ) : (
           <div className="p-4 space-y-4">
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <MessageBubble key={msg.id} message={msg} showEvaluation={showEvaluation} />
             ))}
             {streaming && (
               <div className="flex justify-start">
