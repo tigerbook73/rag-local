@@ -9,7 +9,6 @@ interface EvalOptions {
   strategy: "fixed" | "semantic";
   chunkSize: number;
   chunkOverlap: number;
-  sample: number;
 }
 
 interface QueryRow {
@@ -32,36 +31,24 @@ function vecStr(v: number[]): string {
   return `[${v.join(",")}]`;
 }
 
-function sampleArray<T>(arr: T[], n: number): T[] {
-  if (n >= arr.length) return arr;
-  const copy = [...arr];
-  for (let i = 0; i < n; i++) {
-    const j = i + Math.floor(Math.random() * (copy.length - i));
-    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
-  }
-  return copy.slice(0, n);
-}
-
 export async function cmdEval(opts: EvalOptions): Promise<void> {
-  const { dataset, model, strategy, chunkSize, chunkOverlap, sample } = opts;
+  const { dataset, model, strategy, chunkSize, chunkOverlap } = opts;
   const chunkingConfig = `${strategy}-${chunkSize}-${chunkOverlap}`;
   const embeddingConfig = `${model}/${chunkingConfig}`;
-  console.log(`[eval] dataset=${dataset} config=${embeddingConfig} sample=${sample}`);
+  console.log(`[eval] dataset=${dataset} config=${embeddingConfig}`);
 
   const embeddingService = new EmbeddingService();
   embeddingService.init();
 
-  const allQueries = await prisma.$queryRawUnsafe<QueryRow[]>(
-    `SELECT beir_query_id, text FROM beir_queries WHERE dataset = $1`,
+  const queries = await prisma.$queryRawUnsafe<QueryRow[]>(
+    `SELECT beir_query_id, text FROM beir_queries WHERE dataset = $1 ORDER BY beir_query_id`,
     dataset,
   );
-  if (allQueries.length === 0) {
+  if (queries.length === 0) {
     console.error(`[eval] no queries found — run "import" first`);
     process.exit(1);
   }
-
-  const sampled = sampleArray(allQueries, sample);
-  console.log(`[eval] ${sampled.length}/${allQueries.length} queries sampled`);
+  console.log(`[eval] ${queries.length} queries (full set)`);
 
   const qrelRows = await prisma.$queryRawUnsafe<QrelRow[]>(
     `SELECT query_id, doc_id, relevance FROM beir_qrels WHERE dataset = $1`,
@@ -73,9 +60,16 @@ export async function cmdEval(opts: EvalOptions): Promise<void> {
     qrels.get(r.query_id)!.set(r.doc_id, r.relevance);
   }
 
-  // Batch embed all query texts in one HTTP call
-  console.log(`[eval] embedding ${sampled.length} queries...`);
-  const queryEmbeddings = await embeddingService.embedBatch(sampled.map((q) => q.text));
+  // Embed queries in batches to avoid overwhelming the sidecar
+  const EMBED_BATCH = 32;
+  console.log(`[eval] embedding ${queries.length} queries...`);
+  const queryEmbeddings: number[][] = [];
+  for (let i = 0; i < queries.length; i += EMBED_BATCH) {
+    const batch = queries.slice(i, i + EMBED_BATCH);
+    const embs = await embeddingService.embedBatch(batch.map((q) => q.text));
+    queryEmbeddings.push(...embs);
+    printProgress(Math.min(i + EMBED_BATCH, queries.length), queries.length, "embedding queries");
+  }
   console.log(`[eval] searching...`);
 
   const agg = { ndcg10: 0, recall10: 0, recall100: 0, mrr10: 0 };
@@ -87,8 +81,8 @@ export async function cmdEval(opts: EvalOptions): Promise<void> {
     relevant_in_top10: number;
   }[] = [];
 
-  for (let i = 0; i < sampled.length; i++) {
-    const q = sampled[i]!;
+  for (let i = 0; i < queries.length; i++) {
+    const q = queries[i]!;
     const qEmb = queryEmbeddings[i]!;
 
     // Chunk-level retrieval aggregated to doc level (max score per doc)
@@ -127,10 +121,10 @@ export async function cmdEval(opts: EvalOptions): Promise<void> {
       relevant_in_top10: hitIds.slice(0, 10).filter((d) => relevantSet.has(d)).length,
     });
 
-    printProgress(i + 1, sampled.length, "queries");
+    printProgress(i + 1, queries.length, "queries");
   }
 
-  const n = sampled.length;
+  const n = queries.length;
   const finalMetrics = {
     "ndcg@10": +(agg.ndcg10 / n).toFixed(6),
     "recall@10": +(agg.recall10 / n).toFixed(6),

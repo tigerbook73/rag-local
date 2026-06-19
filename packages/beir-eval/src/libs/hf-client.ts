@@ -65,6 +65,11 @@ export interface HfQrelRow {
   score: number;
 }
 
+export async function getCorpusSize(dataset: string): Promise<number> {
+  const page = await fetchPage<HfCorpusRow>(`BeIR/${dataset}`, "corpus", "corpus", 0);
+  return page.num_rows_total;
+}
+
 export function fetchCorpus(dataset: string): AsyncGenerator<HfPage<HfCorpusRow>> {
   return fetchAll<HfCorpusRow>(`BeIR/${dataset}`, "corpus", "corpus");
 }

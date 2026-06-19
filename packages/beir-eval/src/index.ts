@@ -96,7 +96,6 @@ program
   .option("--strategy <s>", "Chunking strategy: fixed | semantic", DEFAULT_STRATEGY)
   .option("--chunk-size <n>", "Chunk size in characters", String(DEFAULT_CHUNK_SIZE))
   .option("--chunk-overlap <n>", "Chunk overlap in characters", String(DEFAULT_CHUNK_OVERLAP))
-  .option("--sample <n>", "Number of queries to sample", "100")
   .action(
     async (opts: {
       dataset: string;
@@ -104,7 +103,6 @@ program
       strategy: string;
       chunkSize: string;
       chunkOverlap: string;
-      sample: string;
     }) => {
       await cmdEval({
         dataset: opts.dataset,
@@ -112,7 +110,6 @@ program
         strategy: opts.strategy as "fixed" | "semantic",
         chunkSize: parseInt(opts.chunkSize, 10),
         chunkOverlap: parseInt(opts.chunkOverlap, 10),
-        sample: parseInt(opts.sample, 10),
       });
     },
   );

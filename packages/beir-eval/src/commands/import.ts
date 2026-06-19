@@ -1,9 +1,21 @@
 import { prisma } from "@rag-local/db";
-import { fetchCorpus, fetchQueries, fetchQrels } from "../libs/hf-client.js";
+import { fetchCorpus, fetchQueries, fetchQrels, getCorpusSize } from "../libs/hf-client.js";
 import { printProgress } from "../libs/progress.js";
+
+const MAX_CORPUS_SIZE = 5_000;
 
 export async function cmdImport(dataset: string): Promise<void> {
   console.log(`[import] dataset=${dataset}`);
+
+  const corpusSize = await getCorpusSize(dataset);
+  if (corpusSize > MAX_CORPUS_SIZE) {
+    console.error(
+      `[import] dataset "${dataset}" has ${corpusSize.toLocaleString()} documents, exceeds the ${MAX_CORPUS_SIZE.toLocaleString()} limit.`,
+    );
+    console.error(`[import] supported datasets: nfcorpus, scifact, fiqa, arguana, scidocs, etc.`);
+    process.exit(1);
+  }
+  console.log(`[import] corpus size: ${corpusSize} docs (within limit)`);
 
   let corpusCount = 0;
   for await (const { rows, total } of fetchCorpus(dataset)) {

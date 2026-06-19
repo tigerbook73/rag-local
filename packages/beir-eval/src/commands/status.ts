@@ -67,7 +67,9 @@ export async function cmdStatus(dataset?: string): Promise<void> {
     const dsChunks = chunkRows.filter((r) => r.dataset === ds);
     if (dsChunks.length === 0) {
       console.log(`  chunks:  none`);
-      console.log(`    → run: beir-eval embed --dataset ${ds} --strategy fixed --chunk-size 512 --chunk-overlap 50`);
+      console.log(
+        `    → run: beir-eval embed --dataset ${ds} --strategy fixed --chunk-size 512 --chunk-overlap 50`,
+      );
     } else {
       console.log(`  chunks:`);
       for (const c of dsChunks) {
@@ -77,7 +79,9 @@ export async function cmdStatus(dataset?: string): Promise<void> {
         const status = complete
           ? "✓ complete"
           : `⟳ incomplete (${chunkedDocs}/${corpusCount} docs) — resumable`;
-        console.log(`    ${c.chunking_config.padEnd(22)} ${chunks.toLocaleString().padStart(7)} chunks  ${status}`);
+        console.log(
+          `    ${c.chunking_config.padEnd(22)} ${chunks.toLocaleString().padStart(7)} chunks  ${status}`,
+        );
       }
     }
 
@@ -88,10 +92,11 @@ export async function cmdStatus(dataset?: string): Promise<void> {
       console.log(`  embeddings:`);
       for (const e of dsEmb) {
         const embedded = Number(e.emb_count);
-        const chunkRow = dsChunks.find((c) => c.dataset === ds && c.chunking_config === e.chunking_config);
+        const chunkRow = dsChunks.find(
+          (c) => c.dataset === ds && c.chunking_config === e.chunking_config,
+        );
         const totalChunks = chunkRow ? Number(chunkRow.chunk_count) : "?";
-        const complete =
-          typeof totalChunks === "number" && embedded >= totalChunks;
+        const complete = typeof totalChunks === "number" && embedded >= totalChunks;
         const status = complete
           ? "✓ complete"
           : `⟳ incomplete (${embedded}/${totalChunks}) — resumable`;

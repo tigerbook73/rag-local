@@ -34,7 +34,12 @@ export async function cmdBackup({ dataset, output }: BackupOptions): Promise<voi
 
   // ── 1. Corpus ────────────────────────────────────────────────────────────
   {
-    interface Row { id: string; beir_doc_id: string; title: string | null; text: string; }
+    interface Row {
+      id: string;
+      beir_doc_id: string;
+      title: string | null;
+      text: string;
+    }
 
     const [{ n }] = await prisma.$queryRawUnsafe<[{ n: bigint }]>(
       `SELECT COUNT(*)::bigint as n FROM beir_corpus WHERE dataset = $1`,
@@ -60,7 +65,13 @@ export async function cmdBackup({ dataset, output }: BackupOptions): Promise<voi
 
   // ── 2. Chunks ────────────────────────────────────────────────────────────
   {
-    interface Row { id: string; corpus_id: string; chunk_index: number; content: string; chunking_config: string; }
+    interface Row {
+      id: string;
+      corpus_id: string;
+      chunk_index: number;
+      content: string;
+      chunking_config: string;
+    }
 
     const [{ n }] = await prisma.$queryRawUnsafe<[{ n: bigint }]>(
       `SELECT COUNT(*)::bigint as n
@@ -89,7 +100,11 @@ export async function cmdBackup({ dataset, output }: BackupOptions): Promise<voi
 
   // ── 3. Embeddings (corpus + eval excluded — only corpus embeddings) ───────
   {
-    interface Row { chunk_id: string; model: string; embedding: string; }
+    interface Row {
+      chunk_id: string;
+      model: string;
+      embedding: string;
+    }
 
     const [{ n }] = await prisma.$queryRawUnsafe<[{ n: bigint }]>(
       `SELECT COUNT(*)::bigint as n

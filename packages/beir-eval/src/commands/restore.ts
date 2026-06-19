@@ -43,7 +43,13 @@ export async function cmdRestore({ dataset, input }: RestoreOptions): Promise<vo
   console.log(`[restore] dataset=${dataset}  input=${dir}`);
 
   // ── 1. Corpus ────────────────────────────────────────────────────────────
-  interface CorpusRow { id: string; dataset: string; beir_doc_id: string; title: string | null; text: string; }
+  interface CorpusRow {
+    id: string;
+    dataset: string;
+    beir_doc_id: string;
+    title: string | null;
+    text: string;
+  }
 
   const corpusCount = await readJsonlBatched<CorpusRow>(
     path.join(dir, "corpus.jsonl"),
@@ -62,7 +68,13 @@ export async function cmdRestore({ dataset, input }: RestoreOptions): Promise<vo
   console.log(`\r[restore] corpus: ${corpusCount} docs`);
 
   // ── 2. Chunks ────────────────────────────────────────────────────────────
-  interface ChunkRow { id: string; corpus_id: string; chunk_index: number; content: string; chunking_config: string; }
+  interface ChunkRow {
+    id: string;
+    corpus_id: string;
+    chunk_index: number;
+    content: string;
+    chunking_config: string;
+  }
 
   const chunkCount = await readJsonlBatched<ChunkRow>(
     path.join(dir, "chunks.jsonl"),
@@ -81,7 +93,11 @@ export async function cmdRestore({ dataset, input }: RestoreOptions): Promise<vo
   console.log(`\r[restore] chunks: ${chunkCount} chunks`);
 
   // ── 3. Embeddings ────────────────────────────────────────────────────────
-  interface EmbRow { chunk_id: string; model: string; embedding: string; }
+  interface EmbRow {
+    chunk_id: string;
+    model: string;
+    embedding: string;
+  }
 
   const embCount = await readJsonlBatched<EmbRow>(
     path.join(dir, "embeddings.jsonl"),
