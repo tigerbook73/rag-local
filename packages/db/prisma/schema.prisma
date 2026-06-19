@@ -166,13 +166,14 @@ model BeirCorpusChunk {
   id             String                @id @default(uuid()) @db.Uuid
   corpusId       String                @map("corpus_id") @db.Uuid
   chunkIndex     Int                   @map("chunk_index")
+  startOffset    Int                   @map("start_offset")
   content        String
   chunkingConfig String                @map("chunking_config")
   createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz
   corpus         BeirCorpus            @relation(fields: [corpusId], references: [id], onDelete: Cascade)
   embeddings     BeirCorpusEmbedding[]
 
-  @@unique([corpusId, chunkIndex, chunkingConfig])
+  @@unique([corpusId, startOffset, chunkingConfig])
   @@index([corpusId, chunkingConfig])
   @@map("beir_corpus_chunks")
 }

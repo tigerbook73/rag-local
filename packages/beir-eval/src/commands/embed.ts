@@ -34,38 +34,31 @@ export async function cmdEmbed(opts: EmbedOptions): Promise<void> {
 
     const chunker = createChunkingStrategy({ strategy, chunkSize, chunkOverlap });
 
-    // Step 1: chunk docs that have no chunks for this config yet
+    // Step 1: chunk all docs; ON CONFLICT per (corpus_id, start_offset, chunking_config) skips
+    // already-written chunks, enabling chunk-level resume after partial failures
     const docs = await prisma.$queryRawUnsafe<CorpusRow[]>(
-      `SELECT c.id, c.text
-       FROM beir_corpus c
-       WHERE c.dataset = $1
-         AND NOT EXISTS (
-           SELECT 1 FROM beir_corpus_chunks ch
-           WHERE ch.corpus_id = c.id AND ch.chunking_config = $2
-         )`,
+      `SELECT id, text FROM beir_corpus WHERE dataset = $1`,
       dataset,
-      chunkingConfig,
     );
 
-    if (docs.length > 0) {
-      console.log(`[embed] chunking ${docs.length} docs (${chunkingConfig})...`);
-      let done = 0;
-      for (const doc of docs) {
-        const chunks = chunker.chunk(doc.text);
-        for (const chunk of chunks) {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO beir_corpus_chunks (id, corpus_id, chunk_index, content, chunking_config)
-             VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4)
-             ON CONFLICT (corpus_id, chunk_index, chunking_config) DO NOTHING`,
-            doc.id,
-            chunk.index,
-            chunk.content,
-            chunkingConfig,
-          );
-        }
-        done++;
-        if (done % 500 === 0 || done === docs.length) printProgress(done, docs.length, "chunking");
+    console.log(`[embed] chunking ${docs.length} docs (${chunkingConfig})...`);
+    let done = 0;
+    for (const doc of docs) {
+      const chunks = chunker.chunk(doc.text);
+      for (const chunk of chunks) {
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO beir_corpus_chunks (id, corpus_id, chunk_index, start_offset, content, chunking_config)
+           VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, $5)
+           ON CONFLICT (corpus_id, start_offset, chunking_config) DO NOTHING`,
+          doc.id,
+          chunk.index,
+          chunk.startOffset,
+          chunk.content,
+          chunkingConfig,
+        );
       }
+      done++;
+      if (done % 500 === 0 || done === docs.length) printProgress(done, docs.length, "chunking");
     }
 
     // Step 2: embed chunks that don't have an embedding for this model yet
@@ -83,7 +76,9 @@ export async function cmdEmbed(opts: EmbedOptions): Promise<void> {
       model,
     );
 
-    console.log(`[embed] embedding ${chunks.length} chunks (model=${model}, batch=${batchSize})...`);
+    console.log(
+      `[embed] embedding ${chunks.length} chunks (model=${model}, batch=${batchSize})...`,
+    );
     for (let i = 0; i < chunks.length; i += batchSize) {
       const batch = chunks.slice(i, i + batchSize);
       const embeddings = await embeddingService.embedBatch(batch.map((c) => c.content));
