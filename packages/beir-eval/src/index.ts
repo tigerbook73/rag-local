@@ -5,6 +5,9 @@ import { cmdEval } from "./commands/eval.js";
 import { cmdInject } from "./commands/inject.js";
 import { cmdEject } from "./commands/eject.js";
 import { cmdList } from "./commands/list.js";
+import { cmdStatus } from "./commands/status.js";
+import { cmdBackup } from "./commands/backup.js";
+import { cmdRestore } from "./commands/restore.js";
 
 const DEFAULT_MODEL = "bge-m3";
 const DEFAULT_STRATEGY = "fixed" as const;
@@ -20,6 +23,32 @@ program
   .description("List all available BEIR datasets from HuggingFace")
   .action(async () => {
     await cmdList();
+  });
+
+program
+  .command("status")
+  .description("Show corpus / chunk / embedding completion status per dataset")
+  .option("--dataset <name>", "Filter to a specific BEIR dataset")
+  .action(async (opts: { dataset?: string }) => {
+    await cmdStatus(opts.dataset);
+  });
+
+program
+  .command("backup")
+  .description("Export corpus, chunks and embeddings to JSONL files (no eval data)")
+  .requiredOption("--dataset <name>", "BEIR dataset name")
+  .option("--output <dir>", "Output directory", "./beir-backup")
+  .action(async (opts: { dataset: string; output: string }) => {
+    await cmdBackup(opts);
+  });
+
+program
+  .command("restore")
+  .description("Import corpus, chunks and embeddings from a backup directory")
+  .requiredOption("--dataset <name>", "BEIR dataset name")
+  .option("--input <dir>", "Input directory", "./beir-backup")
+  .action(async (opts: { dataset: string; input: string }) => {
+    await cmdRestore(opts);
   });
 
 program
