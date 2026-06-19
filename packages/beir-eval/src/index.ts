@@ -9,6 +9,7 @@ import { cmdStatus } from "./commands/status.js";
 import { cmdBackup } from "./commands/backup.js";
 import { cmdRestore } from "./commands/restore.js";
 import { cmdClean } from "./commands/clean.js";
+import { cmdBench } from "./commands/bench.js";
 
 const DEFAULT_MODEL = "bge-m3";
 const DEFAULT_STRATEGY = "fixed" as const;
@@ -76,7 +77,7 @@ program
   .option("--strategy <s>", "Chunking strategy: fixed | semantic", DEFAULT_STRATEGY)
   .option("--chunk-size <n>", "Chunk size in characters", String(DEFAULT_CHUNK_SIZE))
   .option("--chunk-overlap <n>", "Chunk overlap in characters", String(DEFAULT_CHUNK_OVERLAP))
-  .option("--batch-size <n>", "Embedding batch size", "32")
+  .option("--batch-size <n>", "Embedding batch size", "5")
   .action(
     async (opts: {
       dataset: string;
@@ -150,6 +151,24 @@ program
   );
 
 program
+  .command("bench")
+  .description("Benchmark embedding sidecar to find the optimal batch size")
+  .option("--batch-sizes <list>", "Comma-separated batch sizes to test", "30,60,90,120,180,240,300")
+  .option("--sample-size <n>", "Number of sample chunks to embed per round", "256")
+  .option("--chunk-size <n>", "Character length of each sample chunk", "512")
+  .option("--rounds <n>", "Rounds per batch size (averaged)", "2")
+  .action(
+    async (opts: { batchSizes: string; sampleSize: string; chunkSize: string; rounds: string }) => {
+      await cmdBench({
+        batchSizes: opts.batchSizes.split(",").map(Number),
+        sampleSize: parseInt(opts.sampleSize, 10),
+        chunkSize: parseInt(opts.chunkSize, 10),
+        rounds: parseInt(opts.rounds, 10),
+      });
+    },
+  );
+
+program
   .command("eject")
   .description("Remove injected BEIR documents from production tables")
   .requiredOption("--dataset <name>", "BEIR dataset name")
@@ -157,8 +176,14 @@ program
     await cmdEject(opts.dataset);
   });
 
-if (process.argv.length <= 2) {
+// pnpm forwards args via '--' separator; strip it so commander sees subcommands correctly
+const argv =
+  process.argv[2] === "--"
+    ? [process.argv[0]!, process.argv[1]!, ...process.argv.slice(3)]
+    : process.argv;
+
+if (argv.length <= 2) {
   program.help(); // exits 0
 } else {
-  program.parse(process.argv);
+  program.parse(argv);
 }

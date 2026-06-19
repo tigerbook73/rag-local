@@ -2,7 +2,7 @@ import { prisma } from "@rag-local/db";
 import { fetchCorpus, fetchQueries, fetchQrels, getCorpusSize } from "../libs/hf-client.js";
 import { printProgress } from "../libs/progress.js";
 
-const MAX_CORPUS_SIZE = 5_000;
+const MAX_CORPUS_SIZE = 10_000;
 
 export async function cmdImport(dataset: string): Promise<void> {
   let failed = false;

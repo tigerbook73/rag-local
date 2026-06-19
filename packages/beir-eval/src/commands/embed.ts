@@ -79,20 +79,26 @@ export async function cmdEmbed(opts: EmbedOptions): Promise<void> {
     console.log(
       `[embed] embedding ${chunks.length} chunks (model=${model}, batch=${batchSize})...`,
     );
+    const embedStart = Date.now();
     for (let i = 0; i < chunks.length; i += batchSize) {
       const batch = chunks.slice(i, i + batchSize);
       const embeddings = await embeddingService.embedBatch(batch.map((c) => c.content));
-      for (let j = 0; j < batch.length; j++) {
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO beir_corpus_embeddings (id, chunk_id, model, embedding)
-           VALUES (gen_random_uuid(), $1::uuid, $2, $3::vector)
-           ON CONFLICT (chunk_id, model) DO UPDATE SET embedding = EXCLUDED.embedding`,
-          batch[j]!.id,
-          model,
-          vecStr(embeddings[j]!),
-        );
-      }
-      printProgress(Math.min(i + batchSize, chunks.length), chunks.length, "embedding");
+      const placeholders = batch
+        .map((_, j) => `(gen_random_uuid(), $${j * 3 + 1}::uuid, $${j * 3 + 2}, $${j * 3 + 3}::vector)`)
+        .join(", ");
+      const params: string[] = batch.flatMap((c, j) => [c.id, model, vecStr(embeddings[j]!)]);
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO beir_corpus_embeddings (id, chunk_id, model, embedding)
+         VALUES ${placeholders}
+         ON CONFLICT (chunk_id, model) DO UPDATE SET embedding = EXCLUDED.embedding`,
+        ...params,
+      );
+      const done = Math.min(i + batchSize, chunks.length);
+      const elapsed = (Date.now() - embedStart) / 1000;
+      const speed = (done / elapsed).toFixed(1);
+      const pct = String(Math.round((done / chunks.length) * 100)).padStart(3);
+      process.stdout.write(`\r[${pct}%] embedding: ${done}/${chunks.length}  ${speed} chunks/s`);
+      if (done >= chunks.length) console.log();
     }
     console.log("[embed] done.");
   } catch (err) {

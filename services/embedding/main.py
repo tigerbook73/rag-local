@@ -64,7 +64,7 @@ def embed(req: EmbedRequest):
 @app.post("/embed/batch")
 def embed_batch(req: EmbedBatchRequest):
     assert model is not None
-    vectors = model.encode(req.texts, normalize_embeddings=True).tolist()
+    vectors = model.encode(req.texts, normalize_embeddings=True, batch_size=len(req.texts)).tolist()
     return {"embeddings": vectors}
 
 
