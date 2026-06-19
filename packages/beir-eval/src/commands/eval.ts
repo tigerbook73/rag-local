@@ -102,7 +102,9 @@ export async function cmdEval(opts: EvalOptions): Promise<void> {
       const hitIds = hits.map((h) => h.beir_doc_id);
       const relevant = qrels.get(q.beir_query_id) ?? new Map<string, number>();
       // relevantSet uses threshold >= 1 for Recall/MRR; NDCG uses raw scores
-      const relevantSet = new Set([...relevant.entries()].filter(([, r]) => r >= 1).map(([d]) => d));
+      const relevantSet = new Set(
+        [...relevant.entries()].filter(([, r]) => r >= 1).map(([d]) => d),
+      );
 
       const n10 = ndcgAtK(hitIds, relevant, 10);
       agg.ndcg10 += n10;

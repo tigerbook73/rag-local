@@ -25,7 +25,9 @@ export async function cmdImport(dataset: string): Promise<void> {
          FROM jsonb_to_recordset($2::jsonb) AS t(beir_doc_id text, title text, text text)
          ON CONFLICT (dataset, beir_doc_id) DO NOTHING`,
         dataset,
-        JSON.stringify(rows.map((r) => ({ beir_doc_id: r._id, title: r.title ?? "", text: r.text }))),
+        JSON.stringify(
+          rows.map((r) => ({ beir_doc_id: r._id, title: r.title ?? "", text: r.text })),
+        ),
       );
       corpusCount += rows.length;
       printProgress(corpusCount, total, "corpus");
@@ -54,7 +56,11 @@ export async function cmdImport(dataset: string): Promise<void> {
          ON CONFLICT (dataset, query_id, doc_id) DO NOTHING`,
         dataset,
         JSON.stringify(
-          rows.map((r) => ({ query_id: r["query-id"], doc_id: r["corpus-id"], relevance: r.score })),
+          rows.map((r) => ({
+            query_id: r["query-id"],
+            doc_id: r["corpus-id"],
+            relevance: r.score,
+          })),
         ),
       );
       qrelCount += rows.length;

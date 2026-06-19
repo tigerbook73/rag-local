@@ -65,7 +65,8 @@ export async function cmdInject(opts: InjectOptions): Promise<void> {
         dataset,
       );
       corpusToDocId.set(doc.corpus_id, row!.id);
-      if ((i + 1) % 200 === 0 || i + 1 === docs.length) printProgress(i + 1, docs.length, "documents");
+      if ((i + 1) % 200 === 0 || i + 1 === docs.length)
+        printProgress(i + 1, docs.length, "documents");
     }
 
     const chunks = await prisma.$queryRawUnsafe<ChunkWithEmbedding[]>(
@@ -93,7 +94,8 @@ export async function cmdInject(opts: InjectOptions): Promise<void> {
         chunk.embedding,
         chunk.chunk_index,
       );
-      if ((i + 1) % 500 === 0 || i + 1 === chunks.length) printProgress(i + 1, chunks.length, "chunks");
+      if ((i + 1) % 500 === 0 || i + 1 === chunks.length)
+        printProgress(i + 1, chunks.length, "chunks");
     }
     console.log(`[inject] done — ${docs.length} docs, ${chunks.length} chunks injected.`);
   } catch (err) {

@@ -39,7 +39,9 @@ export async function cmdStatus(dataset?: string): Promise<void> {
     );
 
     if (corpusRows.length === 0) {
-      console.log("No BEIR data found. Import a dataset first:\n  beir-eval import --dataset <name>");
+      console.log(
+        "No BEIR data found. Import a dataset first:\n  beir-eval import --dataset <name>",
+      );
       return;
     }
 
@@ -100,7 +102,9 @@ export async function cmdStatus(dataset?: string): Promise<void> {
           const status = complete
             ? "✓ complete"
             : `⟳ incomplete (${chunkedDocs}/${corpusCount} docs) — resumable`;
-          console.log(`    ${c.chunking_config.padEnd(22)} ${chunks.toLocaleString().padStart(7)} chunks  ${status}`);
+          console.log(
+            `    ${c.chunking_config.padEnd(22)} ${chunks.toLocaleString().padStart(7)} chunks  ${status}`,
+          );
         }
       }
 
