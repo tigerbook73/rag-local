@@ -16,10 +16,8 @@
     "db:migrate": "pnpm --filter @rag-local/db db:migrate",
     "db:seed": "pnpm --filter @rag-local/db db:seed",
     "db:push:test": "pnpm --filter @rag-local/db db:push:test",
-    "gen:spec": "pnpm --filter @rag-local/api gen:spec",
     "gen:types": "node scripts/gen-types.mjs",
     "preview": "pnpm --filter @rag-local/web preview",
-    "beir-eval": "pnpm --filter @rag-local/beir-eval run beir-eval --",
     "infra:up": "docker compose -f docker-compose.dev.yml up -d && supabase start",
     "infra:down": "docker compose -f docker-compose.dev.yml down && supabase stop",
     "infra:rebuild-embedding": "docker compose -f docker-compose.dev.yml up -d --build embedding"

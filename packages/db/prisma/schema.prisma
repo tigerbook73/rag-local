@@ -40,6 +40,7 @@ enum DocumentStatus {
 enum DocumentFiletype {
   txt
   md
+  dataset
 }
 
 enum EvalMetric {
@@ -108,7 +109,6 @@ model Document {
   processingStartedAt   DateTime?        @map("processing_started_at") @db.Timestamptz
   processingCompletedAt DateTime?        @map("processing_completed_at") @db.Timestamptz
   createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  beirSource            String?          @map("beir_source") // BEIR dataset name if injected
   chunks                Chunk[]
 
   @@map("documents")

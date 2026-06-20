@@ -125,16 +125,17 @@ export async function cmdEval(opts: EvalOptions): Promise<void> {
 
     const n = queries.length;
     const finalMetrics = {
-      "ndcg@10": +(agg.ndcg10 / n).toFixed(6),
-      "recall@10": +(agg.recall10 / n).toFixed(6),
-      "recall@100": +(agg.recall100 / n).toFixed(6),
-      "mrr@10": +(agg.mrr10 / n).toFixed(6),
+      ndcg10: +(agg.ndcg10 / n).toFixed(6),
+      recall10: +(agg.recall10 / n).toFixed(6),
+      recall100: +(agg.recall100 / n).toFixed(6),
+      mrr10: +(agg.mrr10 / n).toFixed(6),
     };
 
     console.log("\n── Results ──────────────────────────────");
-    for (const [k, v] of Object.entries(finalMetrics)) {
-      console.log(`  ${k.padEnd(12)}: ${v.toFixed(4)}`);
-    }
+    console.log(`  nDCG@10     : ${finalMetrics.ndcg10.toFixed(4)}`);
+    console.log(`  Recall@10   : ${finalMetrics.recall10.toFixed(4)}`);
+    console.log(`  Recall@100  : ${finalMetrics.recall100.toFixed(4)}`);
+    console.log(`  MRR@10      : ${finalMetrics.mrr10.toFixed(4)}`);
     console.log("─────────────────────────────────────────\n");
 
     const run = await prisma.beirEvalRun.create({

@@ -10,9 +10,11 @@ interface ChunkRow {
   id: string;
   document_id: string;
   filename: string;
+  file_type: string;
   content: string;
   chunk_index: number;
   similarity_score: number;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface RetrievalOptions {
@@ -52,8 +54,10 @@ export class RetrievalService {
       chunkId: r.id,
       documentId: r.document_id,
       documentName: r.filename,
+      fileType: r.file_type,
       content: r.content,
       similarityScore: Number(r.similarity_score),
+      metadata: r.metadata,
     }));
 
     if (options.reranking && chunks.length > 0) {
@@ -89,8 +93,8 @@ export class RetrievalService {
   private async vectorSearch(embedding: number[], topK: number): Promise<ChunkRow[]> {
     const embStr = `[${embedding.map((n) => n.toFixed(8)).join(",")}]`;
     return this.prisma.$queryRawUnsafe<ChunkRow[]>(
-      `SELECT c.id, c.document_id, d.filename, c.content, c.chunk_index,
-              (1 - (c.embedding <=> $1::vector)) AS similarity_score
+      `SELECT c.id, c.document_id, d.filename, d.file_type, c.content, c.chunk_index,
+              c.metadata, (1 - (c.embedding <=> $1::vector)) AS similarity_score
        FROM chunks c
        JOIN documents d ON d.id = c.document_id
        WHERE d.status = 'done'

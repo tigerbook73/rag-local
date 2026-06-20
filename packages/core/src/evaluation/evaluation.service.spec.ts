@@ -24,8 +24,10 @@ const SAMPLE_INPUT = {
       chunkId: "c1",
       documentId: "d1",
       documentName: "doc.txt",
+      fileType: "txt",
       content: "RAG stands for Retrieval-Augmented Generation.",
       similarityScore: 0.9,
+      metadata: null,
     },
   ],
 };
