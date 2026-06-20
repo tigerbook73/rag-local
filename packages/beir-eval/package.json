@@ -1,0 +1,21 @@
+{
+  "name": "@rag-local/beir-eval",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "beir-eval": "node --env-file=../../.env --import=tsx/esm src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@rag-local/core": "workspace:*",
+    "@rag-local/db": "workspace:*",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

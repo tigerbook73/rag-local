@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Upload, Trash2, RefreshCw, FileText } from "lucide-react";
+import { Upload, Trash2, RefreshCw, FileText, Database } from "lucide-react";
 import { Progress } from "@/components/ui/progress.js";
 import { Badge } from "@/components/ui/badge.js";
 import {
@@ -177,14 +177,22 @@ function DocumentRow({
     <TableRow>
       <TableCell className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+          {doc.fileType === "dataset" ? (
+            <Database className="h-4 w-4 text-muted-foreground shrink-0" />
+          ) : (
+            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+          )}
           <span className="truncate max-w-50" title={doc.filename}>
             {doc.filename}
           </span>
         </div>
       </TableCell>
       <TableCell className="px-4 py-3 text-muted-foreground uppercase text-xs">
-        {doc.fileType}
+        {doc.fileType === "dataset" ? (
+          <Badge className="bg-purple-100 text-purple-700 border-transparent text-xs">BEIR</Badge>
+        ) : (
+          doc.fileType
+        )}
       </TableCell>
       <TableCell className="px-4 py-3">
         <StatusBadge status={doc.status} />
@@ -242,13 +250,21 @@ function DocumentCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+            {doc.fileType === "dataset" ? (
+              <Database className="h-4 w-4 text-muted-foreground shrink-0" />
+            ) : (
+              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+            )}
             <span className="font-medium text-sm truncate">{doc.filename}</span>
           </div>
           <StatusBadge status={doc.status} />
         </div>
         <div className="mt-2 text-xs text-muted-foreground flex items-center gap-3">
-          <span className="uppercase">{doc.fileType}</span>
+          {doc.fileType === "dataset" ? (
+            <Badge className="bg-purple-100 text-purple-700 border-transparent text-xs">BEIR</Badge>
+          ) : (
+            <span className="uppercase">{doc.fileType}</span>
+          )}
           {doc.totalChunks != null && <span>{doc.totalChunks} chunks</span>}
           <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
         </div>

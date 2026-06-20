@@ -1,7 +1,7 @@
 export interface EmbeddingJobData {
   documentId: string;
   storagePath: string;
-  fileType: "txt" | "md";
+  fileType: "txt" | "md" | "dataset";
   chunkingStrategy: "fixed" | "semantic";
   chunkSize: number;
   chunkOverlap: number;

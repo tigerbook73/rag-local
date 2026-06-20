@@ -1,15 +1,16 @@
 /**
  * @test-file   MessagesService
- * @description unit tests for streamChat history injection, retrieval options, and findAll
+ * @description unit tests for streamChat history injection, retrieval options, prompt saving, evaluation queuing, and findAll
  * @ai-generated
  * @reviewed-by (!HUMAN EDIT ONLY):
  */
 import { NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import { getQueueToken } from "@nestjs/bullmq";
 import { MessagesService } from "./messages.service.js";
 import { PrismaService } from "../../common/prisma.service.js";
 import { SettingsService } from "../settings/settings.service.js";
-import { LLMService, RetrievalService } from "@rag-local/core";
+import { LLMService, RetrievalService, QUEUE_NAMES } from "@rag-local/core";
 import type { Response } from "express";
 
 // ── mocks ─────────────────────────────────────────────────────────────────────
@@ -27,12 +28,15 @@ const mockLlmService = { getProvider: vi.fn(() => mockLlmProvider) };
 
 const mockRetrievalService = { retrieve: vi.fn() };
 
+const mockEvalQueue = { add: vi.fn().mockResolvedValue({}) };
+
 const DEFAULT_SETTINGS = {
   llmProvider: "deepseek",
   conversationHistoryWindow: 2,
   topK: 5,
   hydeEnabled: false,
   rerankingEnabled: false,
+  onlineEvaluationEnabled: false,
 };
 
 function makeRes(): Response {
@@ -47,6 +51,7 @@ async function buildService() {
       { provide: SettingsService, useValue: mockSettingsService },
       { provide: LLMService, useValue: mockLlmService },
       { provide: RetrievalService, useValue: mockRetrievalService },
+      { provide: getQueueToken(QUEUE_NAMES.EVALUATION), useValue: mockEvalQueue },
     ],
   }).compile();
   return module.get(MessagesService);
@@ -78,7 +83,7 @@ beforeEach(() => vi.clearAllMocks());
  * @target      returns messages wrapped in { data }
  * @strategy    unit, prisma mock
  * @cases
- *   - [PASS] returns messages in chronological order wrapped in { data }
+ *   - [PASS] returns messages wrapped in { data }
  */
 describe("MessagesService.findAll", () => {
   it("returns messages wrapped in { data }", async () => {
@@ -97,9 +102,9 @@ describe("MessagesService.findAll", () => {
 // ── streamChat ────────────────────────────────────────────────────────────────
 
 /**
- * @test-suite  MessagesService.streamChat
+ * @test-suite  MessagesService.streamChat — conversation and history
  * @target      conversation not found / history injection / SSE events / retrieval options
- * @strategy    unit, prisma + LLM mocks
+ * @strategy    unit, prisma + LLM + queue mocks
  * @cases
  *   - [PASS] throws NotFoundException when conversation does not exist
  *   - [PASS] fetches history (window×2 messages) before saving user message
@@ -108,7 +113,7 @@ describe("MessagesService.findAll", () => {
  *   - [PASS] does not inject history when conversationHistoryWindow is 0
  *   - [PASS] passes hyde and reranking flags from settings to retrieve()
  */
-describe("MessagesService.streamChat", () => {
+describe("MessagesService.streamChat — conversation and history", () => {
   it("throws NotFoundException when conversation does not exist", async () => {
     mockPrisma.conversation.findUnique.mockResolvedValue(null);
     const svc = await buildService();
@@ -207,5 +212,68 @@ describe("MessagesService.streamChat", () => {
 
     // findMany should only be called for findAll-style calls, not history
     expect(mockPrisma.message.findMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * @test-suite  MessagesService.streamChat — prompt saving and evaluation queuing
+ * @target      prompt field persisted on assistant message; evaluation job enqueued conditionally
+ * @strategy    unit, prisma + LLM + queue mocks
+ * @cases
+ *   - [PASS] saves serialized prompt JSON in assistant message create call
+ *   - [PASS] does not enqueue evaluation job when onlineEvaluationEnabled is false
+ *   - [PASS] enqueues evaluation job with correct data when onlineEvaluationEnabled is true
+ */
+describe("MessagesService.streamChat — prompt saving and evaluation queuing", () => {
+  it("saves serialized prompt JSON in assistant message create call", async () => {
+    setupHappyPath();
+    const svc = await buildService();
+    await svc.streamChat("conv-1", { content: "q" }, makeRes());
+
+    // Second create() call is the assistant message
+    const assistantCreate = mockPrisma.message.create.mock.calls.find(
+      ([arg]) => arg.data.role === "assistant",
+    );
+    expect(assistantCreate).toBeDefined();
+    const savedPrompt = (assistantCreate![0] as { data: { prompt?: string } }).data.prompt;
+    expect(typeof savedPrompt).toBe("string");
+    const parsed = JSON.parse(savedPrompt!) as unknown[];
+    expect(Array.isArray(parsed)).toBe(true);
+    expect((parsed[0] as { role: string }).role).toBe("system");
+  });
+
+  it("does not enqueue evaluation job when onlineEvaluationEnabled is false", async () => {
+    setupHappyPath();
+    const svc = await buildService();
+    await svc.streamChat("conv-1", { content: "q" }, makeRes());
+
+    expect(mockEvalQueue.add).not.toHaveBeenCalled();
+  });
+
+  it("enqueues evaluation job with correct data when onlineEvaluationEnabled is true", async () => {
+    mockPrisma.conversation.findUnique.mockResolvedValue({ id: "conv-1" });
+    mockSettingsService.getSettings.mockResolvedValue({
+      ...DEFAULT_SETTINGS,
+      onlineEvaluationEnabled: true,
+    });
+    mockPrisma.message.findMany.mockResolvedValue([]);
+    mockPrisma.message.create.mockResolvedValue({ id: "msg-42" });
+    mockPrisma.promptTemplate.findFirst.mockResolvedValue(null);
+    mockRetrievalService.retrieve.mockResolvedValue({ chunks: [], retrievalMs: 5 });
+    mockLlmProvider.stream.mockImplementation(function* () {
+      yield "the answer";
+    });
+
+    const svc = await buildService();
+    await svc.streamChat("conv-1", { content: "my question" }, makeRes());
+
+    expect(mockEvalQueue.add).toHaveBeenCalledOnce();
+    const [, jobData] = mockEvalQueue.add.mock.calls[0] as [
+      string,
+      { messageId: string; question: string; answer: string },
+    ];
+    expect(jobData.messageId).toBe("msg-42");
+    expect(jobData.question).toBe("my question");
+    expect(jobData.answer).toBe("the answer");
   });
 });

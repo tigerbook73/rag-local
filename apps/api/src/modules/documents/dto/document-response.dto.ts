@@ -7,8 +7,8 @@ export class DocumentResponseDto {
   @ApiProperty()
   filename!: string;
 
-  @ApiProperty({ enum: ["txt", "md"] })
-  fileType!: "txt" | "md";
+  @ApiProperty({ enum: ["txt", "md", "dataset"] })
+  fileType!: "txt" | "md" | "dataset";
 
   @ApiProperty({ enum: ["pending", "processing", "done", "failed"] })
   status!: "pending" | "processing" | "done" | "failed";

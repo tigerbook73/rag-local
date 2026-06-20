@@ -1,6 +1,7 @@
 export interface ChunkResult {
   content: string;
   index: number;
+  startOffset: number;
   metadata?: Record<string, unknown>;
 }
 
@@ -23,7 +24,7 @@ export class FixedSizeChunkingStrategy implements ChunkingStrategy {
 
     while (start < text.length) {
       const end = Math.min(start + this.chunkSize, text.length);
-      results.push({ content: text.slice(start, end), index });
+      results.push({ content: text.slice(start, end), index, startOffset: start });
       if (end >= text.length) break;
       start += this.chunkSize - this.overlap;
       index++;

@@ -1,11 +1,29 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { updateMessageFeedback } from "@/lib/api";
+import { updateMessageFeedback, getEvaluation } from "@/lib/api";
 import type { Message, RetrievedChunk } from "../../types/index.js";
+import type { components } from "../../types/generated/api.js";
 
-export function MessageBubble({ message }: { message: Message }) {
+type EvaluationResponse = components["schemas"]["EvaluationResponseDto"];
+type EvaluationItem = components["schemas"]["EvaluationItemResponseDto"];
+
+const METRIC_LABELS: Record<string, string> = {
+  faithfulness: "F",
+  answer_relevancy: "AR",
+  context_precision: "CP",
+};
+
+export function MessageBubble({
+  message,
+  showEvaluation = false,
+}: {
+  message: Message;
+  showEvaluation?: boolean;
+}) {
   const isUser = message.role === "user";
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -17,16 +35,67 @@ export function MessageBubble({ message }: { message: Message }) {
           {message.content}
         </div>
         {!isUser && (
-          <div className="flex items-center gap-1 mt-1">
-            {message.retrievedChunks && message.retrievedChunks.length > 0 && (
-              <SourcesSection chunks={message.retrievedChunks} />
-            )}
-            <div className="ml-auto">
-              <FeedbackButtons messageId={message.id} initialFeedback={message.feedback} />
+          <div className="mt-1 space-y-1">
+            <div className="flex items-center gap-1">
+              {message.retrievedChunks && message.retrievedChunks.length > 0 && (
+                <SourcesSection chunks={message.retrievedChunks} />
+              )}
+              <div className="ml-auto">
+                <FeedbackButtons messageId={message.id} initialFeedback={message.feedback} />
+              </div>
             </div>
+            {showEvaluation && <EvaluationSection messageId={message.id} />}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function EvaluationSection({ messageId }: { messageId: string }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const { data } = useQuery<EvaluationResponse>({
+    queryKey: ["evaluation", messageId],
+    queryFn: () => getEvaluation(messageId),
+    refetchInterval: (query) => (query.state.data?.status === "completed" ? false : 2500),
+    staleTime: 0,
+  });
+
+  if (!data || data.status === "pending") {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        评估中...
+      </div>
+    );
+  }
+
+  const evals = data.evaluations ?? [];
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {evals.map((e: EvaluationItem) => (
+          <button
+            key={e.metric}
+            onClick={() => setExpanded(expanded === e.metric ? null : e.metric)}
+            className="flex items-center gap-1"
+          >
+            <Badge
+              variant="outline"
+              className="text-xs h-5 cursor-pointer hover:bg-muted transition-colors"
+            >
+              {METRIC_LABELS[e.metric] ?? e.metric}: {e.score.toFixed(2)}
+            </Badge>
+          </button>
+        ))}
+      </div>
+      {expanded && (
+        <p className="text-xs text-muted-foreground">
+          {evals.find((e: EvaluationItem) => e.metric === expanded)?.reason}
+        </p>
+      )}
     </div>
   );
 }
@@ -87,17 +156,24 @@ export function SourcesSection({ chunks }: { chunks: RetrievedChunk[] }) {
         引用来源 ({chunks.length})
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 space-y-2">
-        {chunks.map((chunk, i) => (
-          <div key={chunk.chunkId} className="rounded-lg border bg-background p-3 text-xs">
-            <p className="font-medium text-muted-foreground mb-1">
-              [{i + 1}] {chunk.documentName}
-              <span className="ml-2 opacity-60">
-                {(chunk.similarityScore * 100).toFixed(0)}% 相似
-              </span>
-            </p>
-            <p className="text-foreground/80 line-clamp-3">{chunk.content}</p>
-          </div>
-        ))}
+        {chunks.map((chunk, i) => {
+          const meta = chunk.metadata as { beirDocId?: string; title?: string | null } | null;
+          const sourceName =
+            chunk.fileType === "dataset" && meta?.beirDocId != null
+              ? `${chunk.documentName} / ${meta.title ?? meta.beirDocId}`
+              : chunk.documentName;
+          return (
+            <div key={chunk.chunkId} className="rounded-lg border bg-background p-3 text-xs">
+              <p className="font-medium text-muted-foreground mb-1">
+                [{i + 1}] {sourceName}
+                <span className="ml-2 opacity-60">
+                  {(chunk.similarityScore * 100).toFixed(0)}% 相似
+                </span>
+              </p>
+              <p className="text-foreground/80 line-clamp-3">{chunk.content}</p>
+            </div>
+          );
+        })}
       </CollapsibleContent>
     </Collapsible>
   );

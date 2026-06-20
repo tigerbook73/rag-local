@@ -7,6 +7,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ChatPage } from "./ChatPage.js";
 import { useConversationStore } from "../stores/conversation.store.js";
 import type { Message } from "../types/index.js";
@@ -18,16 +19,20 @@ vi.mock("../lib/api.js", () => ({
   streamChat: vi.fn(),
   updateConversation: vi.fn(),
   listMessages: (...args: unknown[]) => mockListMessages(...args) as unknown,
+  getSettings: vi.fn().mockResolvedValue({ onlineEvaluationEnabled: false }),
 }));
 
 function renderPage(path = "/chat") {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:id" element={<ChatPage />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:id" element={<ChatPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -42,8 +47,10 @@ const assistantMessageWithChunks: Message = {
       chunkId: "chunk-1",
       documentId: "doc-1",
       documentName: "faq.md",
+      fileType: "md" as const,
       content: "Answer content here",
       similarityScore: 0.92,
+      metadata: null,
     },
   ],
 };

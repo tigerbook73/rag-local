@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class RetrievedChunkResponseDto {
   @ApiProperty()
@@ -10,14 +10,20 @@ export class RetrievedChunkResponseDto {
   @ApiProperty()
   documentName!: string;
 
+  @ApiProperty({ enum: ["txt", "md", "dataset"] })
+  fileType!: string;
+
   @ApiProperty()
   content!: string;
 
   @ApiProperty()
   similarityScore!: number;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
   rerankScore?: number;
+
+  @ApiPropertyOptional({ type: Object, nullable: true })
+  metadata?: Record<string, unknown> | null;
 }
 
 export class MessageResponseDto {
