@@ -47,8 +47,10 @@ const assistantMessageWithChunks: Message = {
       chunkId: "chunk-1",
       documentId: "doc-1",
       documentName: "faq.md",
+      fileType: "md" as const,
       content: "Answer content here",
       similarityScore: 0.92,
+      metadata: null,
     },
   ],
 };

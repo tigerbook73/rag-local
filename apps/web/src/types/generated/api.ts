@@ -320,7 +320,7 @@ export interface components {
             id: string;
             filename: string;
             /** @enum {string} */
-            fileType: "txt" | "md";
+            fileType: "txt" | "md" | "dataset";
             /** @enum {string} */
             status: "pending" | "processing" | "done" | "failed";
             errorMessage?: string | null;
@@ -366,9 +366,12 @@ export interface components {
             chunkId: string;
             documentId: string;
             documentName: string;
+            /** @enum {string} */
+            fileType: "txt" | "md" | "dataset";
             content: string;
             similarityScore: number;
             rerankScore?: number;
+            metadata?: Record<string, never> | null;
         };
         MessageResponseDto: {
             id: string;

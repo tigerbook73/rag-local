@@ -156,17 +156,24 @@ export function SourcesSection({ chunks }: { chunks: RetrievedChunk[] }) {
         引用来源 ({chunks.length})
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 space-y-2">
-        {chunks.map((chunk, i) => (
-          <div key={chunk.chunkId} className="rounded-lg border bg-background p-3 text-xs">
-            <p className="font-medium text-muted-foreground mb-1">
-              [{i + 1}] {chunk.documentName}
-              <span className="ml-2 opacity-60">
-                {(chunk.similarityScore * 100).toFixed(0)}% 相似
-              </span>
-            </p>
-            <p className="text-foreground/80 line-clamp-3">{chunk.content}</p>
-          </div>
-        ))}
+        {chunks.map((chunk, i) => {
+          const meta = chunk.metadata as { beirDocId?: string; title?: string | null } | null;
+          const sourceName =
+            chunk.fileType === "dataset" && meta?.beirDocId != null
+              ? `${chunk.documentName} / ${meta.title ?? meta.beirDocId}`
+              : chunk.documentName;
+          return (
+            <div key={chunk.chunkId} className="rounded-lg border bg-background p-3 text-xs">
+              <p className="font-medium text-muted-foreground mb-1">
+                [{i + 1}] {sourceName}
+                <span className="ml-2 opacity-60">
+                  {(chunk.similarityScore * 100).toFixed(0)}% 相似
+                </span>
+              </p>
+              <p className="text-foreground/80 line-clamp-3">{chunk.content}</p>
+            </div>
+          );
+        })}
       </CollapsibleContent>
     </Collapsible>
   );
