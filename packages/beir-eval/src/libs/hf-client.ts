@@ -1,51 +1,56 @@
-const HF_API = "https://datasets-server.huggingface.co/rows";
+import { asyncBufferFromUrl, parquetMetadataAsync, parquetReadObjects } from "hyparquet";
+
 const HF_DATASETS_API = "https://huggingface.co/api/datasets";
-const PAGE_SIZE = 100;
+const HF_PARQUET_API = "https://datasets-server.huggingface.co/parquet";
 
-interface HfRow<T> {
-  row: T;
+interface ParquetEntry {
+  url: string;
+  size: number;
 }
 
-interface HfResponse<T> {
-  rows: HfRow<T>[];
-  num_rows_total: number;
+interface HfParquetApiResponse {
+  parquet_files: Array<{
+    config: string;
+    split: string;
+    url: string;
+    size: number;
+  }>;
 }
 
-async function fetchPage<T>(
-  dataset: string,
-  config: string,
-  split: string,
-  offset: number,
-): Promise<HfResponse<T>> {
-  const url = `${HF_API}?dataset=${encodeURIComponent(dataset)}&config=${encodeURIComponent(config)}&split=${encodeURIComponent(split)}&offset=${offset}&length=${PAGE_SIZE}`;
+async function getParquetEntries(dataset: string, config: string, split: string): Promise<ParquetEntry[]> {
+  const url = `${HF_PARQUET_API}?dataset=${encodeURIComponent(dataset)}`;
   const res = await fetch(url);
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`HuggingFace API ${res.status}: ${body}`);
+    throw new Error(`HuggingFace Parquet API ${res.status}: ${body}`);
   }
-  return res.json() as Promise<HfResponse<T>>;
+  const data = (await res.json()) as HfParquetApiResponse;
+  return data.parquet_files
+    .filter((f) => f.config === config && f.split === split)
+    .map((f) => ({ url: f.url, size: f.size }));
+}
+
+async function getEntryRowCount(entry: ParquetEntry): Promise<number> {
+  const file = await asyncBufferFromUrl({ url: entry.url, byteLength: entry.size });
+  const meta = await parquetMetadataAsync(file);
+  return Number(meta.num_rows);
+}
+
+async function readEntryRows<T>(entry: ParquetEntry): Promise<T[]> {
+  const file = await asyncBufferFromUrl({ url: entry.url, byteLength: entry.size });
+  const rows = await parquetReadObjects({ file });
+  return rows.map((row) => {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(row)) {
+      out[k] = typeof v === "bigint" ? Number(v) : v;
+    }
+    return out as T;
+  });
 }
 
 export interface HfPage<T> {
   rows: T[];
   total: number;
-}
-
-async function* fetchAll<T>(
-  dataset: string,
-  config: string,
-  split: string,
-): AsyncGenerator<HfPage<T>> {
-  let offset = 0;
-  let total = Infinity;
-  while (offset < total) {
-    const page = await fetchPage<T>(dataset, config, split, offset);
-    total = page.num_rows_total;
-    const rows = page.rows.map((r) => r.row);
-    if (rows.length === 0) break;
-    yield { rows, total };
-    offset += rows.length;
-  }
 }
 
 export interface HfCorpusRow {
@@ -66,20 +71,31 @@ export interface HfQrelRow {
 }
 
 export async function getCorpusSize(dataset: string): Promise<number> {
-  const page = await fetchPage<HfCorpusRow>(`BeIR/${dataset}`, "corpus", "corpus", 0);
-  return page.num_rows_total;
+  const entries = await getParquetEntries(`BeIR/${dataset}`, "corpus", "corpus");
+  const counts = await Promise.all(entries.map(getEntryRowCount));
+  return counts.reduce((sum, n) => sum + n, 0);
+}
+
+async function* fetchAllFromParquet<T>(dataset: string, config: string, split: string): AsyncGenerator<HfPage<T>> {
+  const entries = await getParquetEntries(dataset, config, split);
+  const counts = await Promise.all(entries.map(getEntryRowCount));
+  const total = counts.reduce((sum, n) => sum + n, 0);
+  for (const entry of entries) {
+    const rows = await readEntryRows<T>(entry);
+    yield { rows, total };
+  }
 }
 
 export function fetchCorpus(dataset: string): AsyncGenerator<HfPage<HfCorpusRow>> {
-  return fetchAll<HfCorpusRow>(`BeIR/${dataset}`, "corpus", "corpus");
+  return fetchAllFromParquet<HfCorpusRow>(`BeIR/${dataset}`, "corpus", "corpus");
 }
 
 export function fetchQueries(dataset: string): AsyncGenerator<HfPage<HfQueryRow>> {
-  return fetchAll<HfQueryRow>(`BeIR/${dataset}`, "queries", "queries");
+  return fetchAllFromParquet<HfQueryRow>(`BeIR/${dataset}`, "queries", "queries");
 }
 
 export function fetchQrels(dataset: string): AsyncGenerator<HfPage<HfQrelRow>> {
-  return fetchAll<HfQrelRow>(`BeIR/${dataset}-qrels`, "default", "test");
+  return fetchAllFromParquet<HfQrelRow>(`BeIR/${dataset}-qrels`, "default", "test");
 }
 
 export interface HfDatasetInfo {
