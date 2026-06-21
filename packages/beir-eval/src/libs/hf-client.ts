@@ -17,7 +17,11 @@ interface HfParquetApiResponse {
   }>;
 }
 
-async function getParquetEntries(dataset: string, config: string, split: string): Promise<ParquetEntry[]> {
+async function getParquetEntries(
+  dataset: string,
+  config: string,
+  split: string,
+): Promise<ParquetEntry[]> {
   const url = `${HF_PARQUET_API}?dataset=${encodeURIComponent(dataset)}`;
   const res = await fetch(url);
   if (!res.ok) {
@@ -76,7 +80,11 @@ export async function getCorpusSize(dataset: string): Promise<number> {
   return counts.reduce((sum, n) => sum + n, 0);
 }
 
-async function* fetchAllFromParquet<T>(dataset: string, config: string, split: string): AsyncGenerator<HfPage<T>> {
+async function* fetchAllFromParquet<T>(
+  dataset: string,
+  config: string,
+  split: string,
+): AsyncGenerator<HfPage<T>> {
   const entries = await getParquetEntries(dataset, config, split);
   const counts = await Promise.all(entries.map(getEntryRowCount));
   const total = counts.reduce((sum, n) => sum + n, 0);
