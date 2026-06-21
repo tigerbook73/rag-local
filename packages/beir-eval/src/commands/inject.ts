@@ -15,6 +15,7 @@ interface ChunkWithSource {
   content: string;
   embedding: string;
   beir_doc_id: string;
+  chunk_index: number;
   title: string | null;
 }
 
@@ -67,39 +68,60 @@ export async function cmdInject(opts: InjectOptions): Promise<void> {
     );
     const docId = docRow!.id;
 
-    const chunks = await prisma.$queryRawUnsafe<ChunkWithSource[]>(
-      `SELECT
-         ROW_NUMBER() OVER (ORDER BY c.beir_doc_id, ch.chunk_index) - 1 AS global_index,
-         ch.content,
-         e.embedding::text,
-         c.beir_doc_id,
-         c.title
-       FROM beir_corpus_chunks ch
-       JOIN beir_corpus_embeddings e ON e.chunk_id = ch.id AND e.model = $1
-       JOIN beir_corpus c ON c.id = ch.corpus_id AND c.dataset = $2
-       WHERE ch.chunking_config = $3
-       ORDER BY c.beir_doc_id, ch.chunk_index`,
-      model,
-      dataset,
-      chunkingConfig,
-    );
-
-    console.log(`[inject] inserting ${chunks.length} chunks...`);
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i]!;
+    const BATCH_SIZE = 100;
+    let inserted = 0;
+    let cursorDocId = "";
+    let cursorChunkIndex = -1;
+    while (inserted < totalChunks) {
+      const batch = await prisma.$queryRawUnsafe<ChunkWithSource[]>(
+        `SELECT
+           $5::bigint + ROW_NUMBER() OVER (ORDER BY c.beir_doc_id, ch.chunk_index) - 1 AS global_index,
+           ch.content,
+           e.embedding::text,
+           c.beir_doc_id,
+           ch.chunk_index,
+           c.title
+         FROM beir_corpus_chunks ch
+         JOIN beir_corpus_embeddings e ON e.chunk_id = ch.id AND e.model = $1
+         JOIN beir_corpus c ON c.id = ch.corpus_id AND c.dataset = $2
+         WHERE ch.chunking_config = $3
+           AND (c.beir_doc_id, ch.chunk_index) > ($6::text, $7::int)
+         ORDER BY c.beir_doc_id, ch.chunk_index
+         LIMIT $4`,
+        model,
+        dataset,
+        chunkingConfig,
+        BATCH_SIZE,
+        inserted,
+        cursorDocId,
+        cursorChunkIndex,
+      );
+      if (batch.length === 0) break;
+      const last = batch[batch.length - 1]!;
+      cursorDocId = last.beir_doc_id;
+      cursorChunkIndex = last.chunk_index;
       await prisma.$executeRawUnsafe(
         `INSERT INTO chunks (id, document_id, content, embedding, chunk_index, metadata)
-         VALUES (gen_random_uuid(), $1::uuid, $2, $3::vector, $4, $5::jsonb)`,
+         SELECT gen_random_uuid(), $1::uuid,
+                item->>'content',
+                (item->>'embedding')::vector,
+                (item->>'chunk_index')::int,
+                item->'metadata'
+         FROM jsonb_array_elements($2::jsonb) AS item`,
         docId,
-        chunk.content,
-        chunk.embedding,
-        Number(chunk.global_index),
-        JSON.stringify({ beirDocId: chunk.beir_doc_id, title: chunk.title }),
+        JSON.stringify(
+          batch.map((c) => ({
+            content: c.content,
+            embedding: c.embedding,
+            chunk_index: Number(c.global_index),
+            metadata: { beirDocId: c.beir_doc_id, title: c.title },
+          })),
+        ),
       );
-      if ((i + 1) % 500 === 0 || i + 1 === chunks.length)
-        printProgress(i + 1, chunks.length, "chunks");
+      inserted += batch.length;
+      printProgress(inserted, totalChunks, "chunks");
     }
-    console.log(`[inject] done — 1 document, ${chunks.length} chunks injected.`);
+    console.log(`[inject] done — 1 document, ${inserted} chunks injected.`);
   } catch (err) {
     console.error(`[inject] ${err instanceof Error ? err.message : String(err)}`);
     failed = true;

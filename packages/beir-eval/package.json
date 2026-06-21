@@ -11,7 +11,8 @@
   "dependencies": {
     "@rag-local/core": "workspace:*",
     "@rag-local/db": "workspace:*",
-    "commander": "^12.0.0"
+    "commander": "^12.0.0",
+    "hyparquet": "^1.26.1"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",
