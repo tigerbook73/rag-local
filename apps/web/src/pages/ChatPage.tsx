@@ -46,16 +46,24 @@ export function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Tracks a conversation id that was just created by handleSend so the
+  // useEffect below doesn't overwrite the optimistic store state.
+  const freshConvIdRef = useRef<string | null>(null);
 
-  // Load existing conversation when navigating to /chat/:id
+  // Load existing conversation when navigating to /chat/:id.
+  // Intentionally omit conversationId from deps — resetting the store must not
+  // re-trigger a load while the URL still points to the old id.
   useEffect(() => {
     if (!id) return;
-    if (id === conversationId) return;
+    if (id === freshConvIdRef.current) {
+      freshConvIdRef.current = null;
+      return;
+    }
 
     listMessages(id)
       .then(({ data }) => loadConversation(id, data))
       .catch(() => setError("加载消息失败"));
-  }, [id, conversationId, loadConversation]);
+  }, [id, loadConversation]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,6 +104,7 @@ export function ChatPage() {
         if (!convId) {
           const conv = await createConversation();
           convId = conv.id;
+          freshConvIdRef.current = convId;
           loadConversation(convId, []);
           void navigate(`/chat/${convId}`, { replace: true });
           updateConversation(convId, content.slice(0, 50)).catch(() => {});

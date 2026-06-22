@@ -107,9 +107,21 @@ export class QualityService {
     count: number,
   ): Promise<{ data: { id: string; dataset: string; text: string }[] }> {
     const rows = await this.prisma.$queryRawUnsafe<{ id: string; dataset: string; text: string }[]>(
-      `SELECT id::text, dataset, text FROM beir_queries
-       WHERE LENGTH(text) > 30
-         AND array_length(string_to_array(trim(text), ' '), 1) > 4
+      `SELECT q.id::text, q.dataset, q.text FROM beir_queries q
+       WHERE LENGTH(q.text) > 30
+         AND array_length(string_to_array(trim(q.text), ' '), 1) > 4
+         AND EXISTS (
+           SELECT 1 FROM documents d
+           WHERE d.file_type = 'dataset'
+             AND d.filename = q.dataset
+             AND d.status = 'done'
+         )
+         AND EXISTS (
+           SELECT 1 FROM beir_qrels r
+           WHERE r.dataset = q.dataset
+             AND r.query_id = q.beir_query_id
+             AND r.relevance >= 1
+         )
        ORDER BY RANDOM() LIMIT $1`,
       count,
     );
