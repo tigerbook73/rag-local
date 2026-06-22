@@ -407,7 +407,8 @@ function QueryTab() {
     form.rerankingEnabled !== settings.rerankingEnabled ||
     form.onlineEvaluationEnabled !== settings.onlineEvaluationEnabled ||
     form.topK !== settings.topK ||
-    form.conversationHistoryWindow !== settings.conversationHistoryWindow;
+    form.conversationHistoryWindow !== settings.conversationHistoryWindow ||
+    form.retrievalMode !== settings.retrievalMode;
 
   function handleSave() {
     mutation.mutate({
@@ -416,6 +417,7 @@ function QueryTab() {
       onlineEvaluationEnabled: form.onlineEvaluationEnabled,
       topK: form.topK,
       conversationHistoryWindow: form.conversationHistoryWindow,
+      retrievalMode: form.retrievalMode,
     });
   }
 
@@ -463,6 +465,28 @@ function QueryTab() {
       </div>
 
       <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Retrieval Mode</Label>
+          <Select
+            value={form.retrievalMode ?? "dense"}
+            onValueChange={(v) =>
+              setForm((f) => ({ ...f, retrievalMode: v as "dense" | "bm25" | "hybrid" }))
+            }
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dense">Dense (Vector)</SelectItem>
+              <SelectItem value="bm25">BM25 (Keyword)</SelectItem>
+              <SelectItem value="hybrid">Hybrid (RRF)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            How documents are retrieved from the index
+          </p>
+        </div>
+
         <div className="space-y-1.5">
           <Label htmlFor="topK">Top-K</Label>
           <Input

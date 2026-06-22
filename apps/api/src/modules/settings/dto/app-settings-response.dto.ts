@@ -31,6 +31,9 @@ export class AppSettingsResponseDto {
   @ApiProperty()
   conversationHistoryWindow!: number;
 
+  @ApiProperty({ enum: ["dense", "bm25", "hybrid"] })
+  retrievalMode!: "dense" | "bm25" | "hybrid";
+
   @ApiProperty({ required: false, enum: [true] })
   requiresReindex?: true;
 }
