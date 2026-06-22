@@ -21,6 +21,8 @@ export interface RetrievalOptions {
   topK: number;
   hyde: boolean;
   reranking: boolean;
+  retrievalMode?: "dense" | "bm25" | "hybrid";
+  rrfK?: number;
 }
 
 export interface RetrievalResult {
@@ -44,21 +46,40 @@ export class RetrievalService {
     llmProvider?: LLMProvider,
   ): Promise<RetrievalResult> {
     const start = Date.now();
+    const mode = options.retrievalMode ?? "dense";
+    let chunks: RetrievedChunk[];
 
-    const embedText =
-      options.hyde && llmProvider ? await this.generateHydeText(query, llmProvider) : query;
-    const embedding = await this.embeddingService.embed(embedText);
-    const rows = await this.vectorSearch(embedding, options.topK);
-
-    let chunks: RetrievedChunk[] = rows.map((r) => ({
-      chunkId: r.id,
-      documentId: r.document_id,
-      documentName: r.filename,
-      fileType: r.file_type,
-      content: r.content,
-      similarityScore: Number(r.similarity_score),
-      metadata: r.metadata,
-    }));
+    if (mode === "bm25") {
+      const rows = await this.bm25Search(query, options.topK);
+      chunks = rows.map((r) => ({
+        chunkId: r.id,
+        documentId: r.document_id,
+        documentName: r.filename,
+        fileType: r.file_type,
+        content: r.content,
+        similarityScore: Number(r.similarity_score),
+        metadata: r.metadata,
+      }));
+    } else if (mode === "hybrid") {
+      const embedText =
+        options.hyde && llmProvider ? await this.generateHydeText(query, llmProvider) : query;
+      const embedding = await this.embeddingService.embed(embedText);
+      const candidate = options.topK * 2;
+      const [denseRows, bm25Rows] = await Promise.all([
+        this.vectorSearch(embedding, candidate),
+        this.bm25Search(query, candidate),
+      ]);
+      const denseChunks = denseRows.map((r) => this.rowToChunk(r));
+      const bm25Chunks = bm25Rows.map((r) => this.rowToChunk(r));
+      chunks = this.fuseRRF(denseChunks, bm25Chunks, options.rrfK ?? 60).slice(0, options.topK);
+    } else {
+      // dense (default)
+      const embedText =
+        options.hyde && llmProvider ? await this.generateHydeText(query, llmProvider) : query;
+      const embedding = await this.embeddingService.embed(embedText);
+      const rows = await this.vectorSearch(embedding, options.topK);
+      chunks = rows.map((r) => this.rowToChunk(r));
+    }
 
     if (options.reranking && chunks.length > 0) {
       chunks = await this.rerank(query, chunks);
@@ -88,6 +109,58 @@ export class RetrievalService {
       // Fall back to original order if reranking fails
       return chunks;
     }
+  }
+
+  private rowToChunk(r: ChunkRow): RetrievedChunk {
+    return {
+      chunkId: r.id,
+      documentId: r.document_id,
+      documentName: r.filename,
+      fileType: r.file_type,
+      content: r.content,
+      similarityScore: Number(r.similarity_score),
+      metadata: r.metadata,
+    };
+  }
+
+  private fuseRRF(
+    denseChunks: RetrievedChunk[],
+    bm25Chunks: RetrievedChunk[],
+    k: number,
+  ): RetrievedChunk[] {
+    const scores = new Map<string, number>();
+    const byId = new Map<string, RetrievedChunk>();
+
+    for (let rank = 0; rank < denseChunks.length; rank++) {
+      const c = denseChunks[rank]!;
+      scores.set(c.chunkId, (scores.get(c.chunkId) ?? 0) + 1 / (k + rank + 1));
+      byId.set(c.chunkId, c);
+    }
+    for (let rank = 0; rank < bm25Chunks.length; rank++) {
+      const c = bm25Chunks[rank]!;
+      scores.set(c.chunkId, (scores.get(c.chunkId) ?? 0) + 1 / (k + rank + 1));
+      byId.set(c.chunkId, c);
+    }
+
+    return [...scores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, score]) => ({ ...byId.get(id)!, similarityScore: score }));
+  }
+
+  private async bm25Search(query: string, topK: number): Promise<ChunkRow[]> {
+    // plainto_tsquery handles arbitrary text safely; $1 is referenced twice but passed once.
+    return this.prisma.$queryRawUnsafe<ChunkRow[]>(
+      `SELECT c.id, c.document_id, d.filename, d.file_type, c.content, c.chunk_index,
+              c.metadata, ts_rank_cd(c.fts, plainto_tsquery('english', $1))::float AS similarity_score
+       FROM chunks c
+       JOIN documents d ON d.id = c.document_id
+       WHERE d.status = 'done'
+         AND c.fts @@ plainto_tsquery('english', $1)
+       ORDER BY similarity_score DESC
+       LIMIT $2`,
+      query,
+      topK,
+    );
   }
 
   private async vectorSearch(embedding: number[], topK: number): Promise<ChunkRow[]> {

@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { cmdImport } from "./commands/import.js";
 import { cmdEmbed } from "./commands/embed.js";
-import { cmdEval } from "./commands/eval.js";
+import { cmdEval, type RetrievalMode } from "./commands/eval.js";
 import { cmdInject } from "./commands/inject.js";
 import { cmdEject } from "./commands/eject.js";
 import { cmdList } from "./commands/list.js";
@@ -106,6 +106,8 @@ program
   .option("--strategy <s>", "Chunking strategy: fixed | semantic", DEFAULT_STRATEGY)
   .option("--chunk-size <n>", "Chunk size in characters", String(DEFAULT_CHUNK_SIZE))
   .option("--chunk-overlap <n>", "Chunk overlap in characters", String(DEFAULT_CHUNK_OVERLAP))
+  .option("--retrieval <mode>", "Retrieval mode: dense | bm25 | hybrid", "dense")
+  .option("--rrf-k <n>", "RRF k parameter for hybrid fusion", "60")
   .action(
     async (opts: {
       dataset: string;
@@ -113,13 +115,22 @@ program
       strategy: string;
       chunkSize: string;
       chunkOverlap: string;
+      retrieval: string;
+      rrfK: string;
     }) => {
+      const retrieval = opts.retrieval as RetrievalMode;
+      if (!["dense", "bm25", "hybrid"].includes(retrieval)) {
+        console.error(`[eval] invalid --retrieval value: ${retrieval}. Use dense | bm25 | hybrid`);
+        process.exit(1);
+      }
       await cmdEval({
         dataset: opts.dataset,
         model: opts.model,
         strategy: opts.strategy as "fixed" | "semantic",
         chunkSize: parseInt(opts.chunkSize, 10),
         chunkOverlap: parseInt(opts.chunkOverlap, 10),
+        retrieval,
+        rrfK: parseInt(opts.rrfK, 10),
       });
     },
   );

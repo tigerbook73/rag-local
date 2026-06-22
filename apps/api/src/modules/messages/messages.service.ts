@@ -83,6 +83,7 @@ export class MessagesService {
           topK: settings.topK,
           hyde: settings.hydeEnabled,
           reranking: settings.rerankingEnabled,
+          retrievalMode: settings.retrievalMode,
         },
         llmProvider,
       );

@@ -9,7 +9,7 @@ pre-commit:
         fi
     lint:
       glob: "*.{ts,tsx,js}"
-      run: pnpm exec eslint {staged_files}
+      run: pnpm exec eslint {staged_files} && git add {staged_files}
     format:
       glob: "*.{ts,tsx,js,json,md,yaml,yml}"
       run: pnpm exec prettier {staged_files}
