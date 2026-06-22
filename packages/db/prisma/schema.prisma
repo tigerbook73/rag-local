@@ -121,6 +121,8 @@ model Chunk {
   documentId String                      @map("document_id") @db.Uuid
   content    String
   embedding  Unsupported("public.vector(1024)")
+  // Generated stored column — managed by PostgreSQL, not Prisma.
+  fts        Unsupported("tsvector")?
   chunkIndex Int                         @map("chunk_index")
   metadata   Json?
   createdAt  DateTime                    @default(now()) @map("created_at") @db.Timestamptz
@@ -154,6 +156,8 @@ model BeirCorpus {
   beirDocId String            @map("beir_doc_id")
   title     String?
   text      String
+  // Generated stored column — managed by PostgreSQL, not Prisma.
+  fts       Unsupported("tsvector")?
   createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz
   chunks    BeirCorpusChunk[]
 

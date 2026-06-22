@@ -13,6 +13,7 @@ export interface AppSettings {
   topK: number;
   onlineEvaluationEnabled: boolean;
   conversationHistoryWindow: number;
+  retrievalMode: "dense" | "bm25" | "hybrid";
 }
 
 const STATIC_KEYS = [
@@ -46,6 +47,7 @@ export class SettingsService {
       topK: parseInt(kv[SETTINGS_KEYS.TOP_K]!),
       onlineEvaluationEnabled: toBoolean(kv[SETTINGS_KEYS.ONLINE_EVALUATION_ENABLED]!),
       conversationHistoryWindow: parseInt(kv[SETTINGS_KEYS.CONVERSATION_HISTORY_WINDOW]!),
+      retrievalMode: (kv[SETTINGS_KEYS.RETRIEVAL_MODE] ?? "dense") as "dense" | "bm25" | "hybrid",
     };
   }
 
@@ -62,6 +64,7 @@ export class SettingsService {
       topK: SETTINGS_KEYS.TOP_K,
       onlineEvaluationEnabled: SETTINGS_KEYS.ONLINE_EVALUATION_ENABLED,
       conversationHistoryWindow: SETTINGS_KEYS.CONVERSATION_HISTORY_WINDOW,
+      retrievalMode: SETTINGS_KEYS.RETRIEVAL_MODE,
     };
 
     const upserts = Object.entries(dtoToKey)

@@ -50,4 +50,9 @@ export class UpdateSettingsDto {
   @IsInt()
   @Min(0)
   conversationHistoryWindow?: number;
+
+  @ApiPropertyOptional({ enum: ["dense", "bm25", "hybrid"] })
+  @IsOptional()
+  @IsIn(["dense", "bm25", "hybrid"])
+  retrievalMode?: "dense" | "bm25" | "hybrid";
 }

@@ -9,6 +9,7 @@ export const SETTINGS_KEYS = {
   ONLINE_EVALUATION_ENABLED: "online_evaluation_enabled",
   CONVERSATION_HISTORY_WINDOW: "conversation_history_window",
   SYSTEM_PROMPT: "system_prompt",
+  RETRIEVAL_MODE: "retrieval_mode",
 } as const;
 
 export const SETTINGS_DEFAULTS: Record<string, string> = {
@@ -21,4 +22,5 @@ export const SETTINGS_DEFAULTS: Record<string, string> = {
   [SETTINGS_KEYS.TOP_K]: "5",
   [SETTINGS_KEYS.ONLINE_EVALUATION_ENABLED]: "false",
   [SETTINGS_KEYS.CONVERSATION_HISTORY_WINDOW]: "0",
+  [SETTINGS_KEYS.RETRIEVAL_MODE]: "dense",
 };

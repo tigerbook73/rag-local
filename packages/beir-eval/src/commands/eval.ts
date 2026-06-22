@@ -4,12 +4,16 @@ import { ndcgAtK, recallAtK, mrrAtK } from "../libs/metrics.js";
 import { printProgress } from "../libs/progress.js";
 import { vecStr, buildChunkingConfig } from "../libs/utils.js";
 
+export type RetrievalMode = "dense" | "bm25" | "hybrid";
+
 interface EvalOptions {
   dataset: string;
   model: string;
   strategy: "fixed" | "semantic";
   chunkSize: number;
   chunkOverlap: number;
+  retrieval: RetrievalMode;
+  rrfK: number;
 }
 
 interface QueryRow {
@@ -30,16 +34,90 @@ interface HitRow {
 
 const EMBED_BATCH = 32;
 
-export async function cmdEval(opts: EvalOptions): Promise<void> {
-  const { dataset, model, strategy, chunkSize, chunkOverlap } = opts;
+function buildEmbeddingConfig(opts: EvalOptions): string {
+  const { retrieval, model, strategy, chunkSize, chunkOverlap, rrfK } = opts;
+  if (retrieval === "bm25") return "bm25";
   const chunkingConfig = buildChunkingConfig(strategy, chunkSize, chunkOverlap);
-  const embeddingConfig = `${model}/${chunkingConfig}`;
+  if (retrieval === "dense") return `${model}/${chunkingConfig}`;
+  return `hybrid/${model}/${chunkingConfig}+bm25/rrf${rrfK}`;
+}
+
+async function fetchDenseHits(
+  qEmb: number[],
+  chunkingConfig: string,
+  dataset: string,
+  model: string,
+  limit: number,
+): Promise<HitRow[]> {
+  return prisma.$queryRawUnsafe<HitRow[]>(
+    `SELECT c.beir_doc_id,
+            MAX(1.0 - (e.embedding <=> $1::vector))::float AS score
+     FROM beir_corpus_embeddings e
+     JOIN beir_corpus_chunks ch ON ch.id = e.chunk_id
+                                AND ch.chunking_config = $2
+     JOIN beir_corpus c ON c.id = ch.corpus_id AND c.dataset = $3
+     WHERE e.model = $4
+     GROUP BY c.beir_doc_id
+     ORDER BY score DESC
+     LIMIT $5`,
+    vecStr(qEmb),
+    chunkingConfig,
+    dataset,
+    model,
+    limit,
+  );
+}
+
+async function fetchBm25Hits(
+  queryText: string,
+  dataset: string,
+  limit: number,
+): Promise<HitRow[]> {
+  // plainto_tsquery handles arbitrary text safely; $1 appears twice but is passed once.
+  return prisma.$queryRawUnsafe<HitRow[]>(
+    `SELECT beir_doc_id,
+            ts_rank_cd(fts, plainto_tsquery('english', $1))::float AS score
+     FROM beir_corpus
+     WHERE dataset = $2
+       AND fts @@ plainto_tsquery('english', $1)
+     ORDER BY score DESC
+     LIMIT $3`,
+    queryText,
+    dataset,
+    limit,
+  );
+}
+
+function fuseRRF(denseHits: HitRow[], bm25Hits: HitRow[], k: number): HitRow[] {
+  const scores = new Map<string, number>();
+
+  for (let rank = 0; rank < denseHits.length; rank++) {
+    const docId = denseHits[rank]!.beir_doc_id;
+    scores.set(docId, (scores.get(docId) ?? 0) + 1 / (k + rank + 1));
+  }
+  for (let rank = 0; rank < bm25Hits.length; rank++) {
+    const docId = bm25Hits[rank]!.beir_doc_id;
+    scores.set(docId, (scores.get(docId) ?? 0) + 1 / (k + rank + 1));
+  }
+
+  return [...scores.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([beir_doc_id, score]) => ({ beir_doc_id, score }));
+}
+
+export async function cmdEval(opts: EvalOptions): Promise<void> {
+  const { dataset, model, strategy, chunkSize, chunkOverlap, retrieval, rrfK } = opts;
+  const chunkingConfig = buildChunkingConfig(strategy, chunkSize, chunkOverlap);
+  const embeddingConfig = buildEmbeddingConfig(opts);
   let failed = false;
   try {
-    console.log(`[eval] dataset=${dataset} config=${embeddingConfig}`);
+    console.log(`[eval] dataset=${dataset} config=${embeddingConfig} retrieval=${retrieval}`);
 
-    const embeddingService = new EmbeddingService();
-    embeddingService.init();
+    let embeddingService: EmbeddingService | null = null;
+    if (retrieval !== "bm25") {
+      embeddingService = new EmbeddingService();
+      embeddingService.init();
+    }
 
     const queries = await prisma.$queryRawUnsafe<QueryRow[]>(
       `SELECT beir_query_id, text FROM beir_queries WHERE dataset = $1 ORDER BY beir_query_id`,
@@ -58,15 +136,17 @@ export async function cmdEval(opts: EvalOptions): Promise<void> {
       qrels.get(r.query_id)!.set(r.doc_id, r.relevance);
     }
 
-    console.log(`[eval] embedding ${queries.length} queries...`);
     const queryEmbeddings: number[][] = [];
-    for (let i = 0; i < queries.length; i += EMBED_BATCH) {
-      const batch = queries.slice(i, i + EMBED_BATCH);
-      const embs = await embeddingService.embedBatch(batch.map((q) => q.text));
-      queryEmbeddings.push(...embs);
-      printProgress(Math.min(i + EMBED_BATCH, queries.length), queries.length, "embedding queries");
+    if (retrieval !== "bm25") {
+      console.log(`[eval] embedding ${queries.length} queries...`);
+      for (let i = 0; i < queries.length; i += EMBED_BATCH) {
+        const batch = queries.slice(i, i + EMBED_BATCH);
+        const embs = await embeddingService!.embedBatch(batch.map((q) => q.text));
+        queryEmbeddings.push(...embs);
+        printProgress(Math.min(i + EMBED_BATCH, queries.length), queries.length, "embedding queries");
+      }
     }
-    console.log(`[eval] searching...`);
+    console.log(`[eval] searching (${retrieval})...`);
 
     const agg = { ndcg10: 0, recall10: 0, recall100: 0, mrr10: 0 };
     const queryDetails: {
@@ -79,29 +159,22 @@ export async function cmdEval(opts: EvalOptions): Promise<void> {
 
     for (let i = 0; i < queries.length; i++) {
       const q = queries[i]!;
-      const qEmb = queryEmbeddings[i]!;
 
-      // Chunk-level retrieval aggregated to doc level (max score per doc)
-      const hits = await prisma.$queryRawUnsafe<HitRow[]>(
-        `SELECT c.beir_doc_id,
-                MAX(1.0 - (e.embedding <=> $1::vector))::float AS score
-         FROM beir_corpus_embeddings e
-         JOIN beir_corpus_chunks ch ON ch.id = e.chunk_id
-                                    AND ch.chunking_config = $2
-         JOIN beir_corpus c ON c.id = ch.corpus_id AND c.dataset = $3
-         WHERE e.model = $4
-         GROUP BY c.beir_doc_id
-         ORDER BY score DESC
-         LIMIT 100`,
-        vecStr(qEmb),
-        chunkingConfig,
-        dataset,
-        model,
-      );
+      let hits: HitRow[];
+      if (retrieval === "bm25") {
+        hits = await fetchBm25Hits(q.text, dataset, 100);
+      } else if (retrieval === "hybrid") {
+        const [denseHits, bm25Hits] = await Promise.all([
+          fetchDenseHits(queryEmbeddings[i]!, chunkingConfig, dataset, model, 100),
+          fetchBm25Hits(q.text, dataset, 100),
+        ]);
+        hits = fuseRRF(denseHits, bm25Hits, rrfK).slice(0, 100);
+      } else {
+        hits = await fetchDenseHits(queryEmbeddings[i]!, chunkingConfig, dataset, model, 100);
+      }
 
       const hitIds = hits.map((h) => h.beir_doc_id);
       const relevant = qrels.get(q.beir_query_id) ?? new Map<string, number>();
-      // relevantSet uses threshold >= 1 for Recall/MRR; NDCG uses raw scores
       const relevantSet = new Set(
         [...relevant.entries()].filter(([, r]) => r >= 1).map(([d]) => d),
       );
