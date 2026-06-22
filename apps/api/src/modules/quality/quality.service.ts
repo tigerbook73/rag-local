@@ -103,6 +103,19 @@ export class QualityService {
     return { data, total };
   }
 
+  async sampleBeirQueries(
+    count: number,
+  ): Promise<{ data: { id: string; dataset: string; text: string }[] }> {
+    const rows = await this.prisma.$queryRawUnsafe<{ id: string; dataset: string; text: string }[]>(
+      `SELECT id::text, dataset, text FROM beir_queries
+       WHERE LENGTH(text) > 30
+         AND array_length(string_to_array(trim(text), ' '), 1) > 4
+       ORDER BY RANDOM() LIMIT $1`,
+      count,
+    );
+    return { data: rows };
+  }
+
   async getBeirRunDetail(id: string) {
     const run = await this.prisma.beirEvalRun.findUnique({
       where: { id },

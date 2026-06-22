@@ -242,6 +242,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/quality/beir-sample-queries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["QualityController_sampleBeirQueries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/quality/beir-runs": {
         parameters: {
             query?: never;
@@ -305,6 +321,8 @@ export interface components {
             topK?: number;
             onlineEvaluationEnabled?: boolean;
             conversationHistoryWindow?: number;
+            /** @enum {string} */
+            retrievalMode?: "dense" | "bm25" | "hybrid";
         };
         UploadDocumentDto: {
             /** Format: binary */
@@ -445,6 +463,14 @@ export interface components {
         EvaluationListResponseDto: {
             data: components["schemas"]["EvaluationSummaryDto"][];
             total: number;
+        };
+        BeirSampleQueryDto: {
+            id: string;
+            dataset: string;
+            text: string;
+        };
+        BeirSampleQueriesResponseDto: {
+            data: components["schemas"]["BeirSampleQueryDto"][];
         };
         BeirMetricsDto: {
             ndcg10: number;
@@ -964,6 +990,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvaluationListResponseDto"];
+                };
+            };
+        };
+    };
+    QualityController_sampleBeirQueries: {
+        parameters: {
+            query?: {
+                count?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BeirSampleQueriesResponseDto"];
                 };
             };
         };

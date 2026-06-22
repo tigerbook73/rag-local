@@ -279,5 +279,22 @@ export async function getBeirRunDetail(
   return data;
 }
 
+export interface BeirSampleQuery {
+  id: string;
+  dataset: string;
+  text: string;
+}
+
+export async function sampleBeirQueries(count = 8): Promise<BeirSampleQuery[]> {
+  try {
+    const res = await fetch(`/api/v1/quality/beir-sample-queries?count=${count}`);
+    if (!res.ok) return [];
+    const body = (await res.json()) as { data: BeirSampleQuery[] };
+    return body.data;
+  } catch {
+    return [];
+  }
+}
+
 // Re-export for callers that use these types directly from this module
 export type { RetrievedChunk };

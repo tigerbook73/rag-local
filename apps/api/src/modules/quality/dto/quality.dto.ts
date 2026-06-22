@@ -172,3 +172,19 @@ export class BeirEvalRunDetailDto {
   @ApiProperty()
   createdAt!: string;
 }
+
+export class BeirSampleQueryDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  dataset!: string;
+
+  @ApiProperty()
+  text!: string;
+}
+
+export class BeirSampleQueriesResponseDto {
+  @ApiProperty({ type: () => [BeirSampleQueryDto] })
+  data!: BeirSampleQueryDto[];
+}
