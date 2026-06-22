@@ -23,10 +23,16 @@ export class AppSettingsResponseDto {
   topK!: number;
 
   @ApiProperty()
+  rerankTopK!: number;
+
+  @ApiProperty()
   onlineEvaluationEnabled!: boolean;
 
   @ApiProperty()
   conversationHistoryWindow!: number;
+
+  @ApiProperty({ enum: ["dense", "bm25", "hybrid"] })
+  retrievalMode!: "dense" | "bm25" | "hybrid";
 
   @ApiProperty({ required: false, enum: [true] })
   requiresReindex?: true;

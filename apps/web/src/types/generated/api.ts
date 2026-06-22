@@ -304,8 +304,11 @@ export interface components {
             hydeEnabled: boolean;
             rerankingEnabled: boolean;
             topK: number;
+            rerankTopK: number;
             onlineEvaluationEnabled: boolean;
             conversationHistoryWindow: number;
+            /** @enum {string} */
+            retrievalMode: "dense" | "bm25" | "hybrid";
             /** @enum {boolean} */
             requiresReindex?: true;
         };
@@ -319,6 +322,7 @@ export interface components {
             hydeEnabled?: boolean;
             rerankingEnabled?: boolean;
             topK?: number;
+            rerankTopK?: number;
             onlineEvaluationEnabled?: boolean;
             conversationHistoryWindow?: number;
             /** @enum {string} */

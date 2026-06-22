@@ -119,7 +119,6 @@ function LlmTab() {
   });
 
   const [provider, setProvider] = useState<"openai" | "deepseek">("deepseek");
-  const [saved, setSaved] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<PromptTemplate | undefined>();
 
@@ -131,8 +130,6 @@ function LlmTab() {
     mutationFn: updateSettings,
     onSuccess: (updated) => {
       queryClient.setQueryData(["settings"], updated);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
     },
   });
 
@@ -178,7 +175,7 @@ function LlmTab() {
           disabled={settingsMutation.isPending || provider === settings?.llmProvider}
           className="w-24"
         >
-          {settingsMutation.isPending ? "Saving..." : saved ? "Saved!" : "Save"}
+          {settingsMutation.isPending ? "Saving..." : "Save"}
         </Button>
       </div>
 
@@ -292,6 +289,11 @@ function IndexingTab() {
     return <div className="text-muted-foreground text-sm">Loading...</div>;
   }
 
+  const isDirty =
+    form.chunkingStrategy !== settings.chunkingStrategy ||
+    form.chunkSize !== settings.chunkSize ||
+    form.chunkOverlap !== settings.chunkOverlap;
+
   return (
     <div className="space-y-6 max-w-md">
       <Alert>
@@ -363,7 +365,7 @@ function IndexingTab() {
             chunkOverlap: form.chunkOverlap,
           })
         }
-        disabled={mutation.isPending}
+        disabled={mutation.isPending || !isDirty}
         className="w-24"
       >
         {mutation.isPending ? "Saving..." : "Save"}
@@ -384,7 +386,6 @@ function QueryTab() {
   });
 
   const [form, setForm] = useState<Partial<Settings>>({});
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (settings) setForm(settings);
@@ -394,14 +395,20 @@ function QueryTab() {
     mutationFn: updateSettings,
     onSuccess: (updated) => {
       queryClient.setQueryData(["settings"], updated);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
     },
   });
 
   if (isLoading || !settings) {
     return <div className="text-muted-foreground text-sm">Loading...</div>;
   }
+
+  const isDirty =
+    form.hydeEnabled !== settings.hydeEnabled ||
+    form.rerankingEnabled !== settings.rerankingEnabled ||
+    form.onlineEvaluationEnabled !== settings.onlineEvaluationEnabled ||
+    form.topK !== settings.topK ||
+    form.conversationHistoryWindow !== settings.conversationHistoryWindow ||
+    form.retrievalMode !== settings.retrievalMode;
 
   function handleSave() {
     mutation.mutate({
@@ -410,6 +417,7 @@ function QueryTab() {
       onlineEvaluationEnabled: form.onlineEvaluationEnabled,
       topK: form.topK,
       conversationHistoryWindow: form.conversationHistoryWindow,
+      retrievalMode: form.retrievalMode,
     });
   }
 
@@ -458,6 +466,28 @@ function QueryTab() {
 
       <div className="space-y-4">
         <div className="space-y-1.5">
+          <Label>Retrieval Mode</Label>
+          <Select
+            value={form.retrievalMode ?? "dense"}
+            onValueChange={(v) =>
+              setForm((f) => ({ ...f, retrievalMode: v as "dense" | "bm25" | "hybrid" }))
+            }
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dense">Dense (Vector)</SelectItem>
+              <SelectItem value="bm25">BM25 (Keyword)</SelectItem>
+              <SelectItem value="hybrid">Hybrid (RRF)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            How documents are retrieved from the index
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="topK">Top-K</Label>
           <Input
             id="topK"
@@ -488,8 +518,8 @@ function QueryTab() {
         </div>
       </div>
 
-      <Button onClick={handleSave} disabled={mutation.isPending} className="w-24">
-        {mutation.isPending ? "Saving..." : saved ? "Saved!" : "Save"}
+      <Button onClick={handleSave} disabled={mutation.isPending || !isDirty} className="w-24">
+        {mutation.isPending ? "Saving..." : "Save"}
       </Button>
 
       {mutation.isError && <p className="text-xs text-destructive">Failed to save settings.</p>}
