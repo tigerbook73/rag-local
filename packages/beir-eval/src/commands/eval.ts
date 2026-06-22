@@ -68,11 +68,7 @@ async function fetchDenseHits(
   );
 }
 
-async function fetchBm25Hits(
-  queryText: string,
-  dataset: string,
-  limit: number,
-): Promise<HitRow[]> {
+async function fetchBm25Hits(queryText: string, dataset: string, limit: number): Promise<HitRow[]> {
   // plainto_tsquery handles arbitrary text safely; $1 appears twice but is passed once.
   return prisma.$queryRawUnsafe<HitRow[]>(
     `SELECT beir_doc_id,
@@ -143,7 +139,11 @@ export async function cmdEval(opts: EvalOptions): Promise<void> {
         const batch = queries.slice(i, i + EMBED_BATCH);
         const embs = await embeddingService!.embedBatch(batch.map((q) => q.text));
         queryEmbeddings.push(...embs);
-        printProgress(Math.min(i + EMBED_BATCH, queries.length), queries.length, "embedding queries");
+        printProgress(
+          Math.min(i + EMBED_BATCH, queries.length),
+          queries.length,
+          "embedding queries",
+        );
       }
     }
     console.log(`[eval] searching (${retrieval})...`);
