@@ -40,6 +40,12 @@ export class UpdateSettingsDto {
   @Min(1)
   topK?: number;
 
+  @ApiPropertyOptional({ minimum: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  rerankTopK?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

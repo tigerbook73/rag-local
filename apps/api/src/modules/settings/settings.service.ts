@@ -11,6 +11,7 @@ export interface AppSettings {
   hydeEnabled: boolean;
   rerankingEnabled: boolean;
   topK: number;
+  rerankTopK: number;
   onlineEvaluationEnabled: boolean;
   conversationHistoryWindow: number;
   retrievalMode: "dense" | "bm25" | "hybrid";
@@ -45,6 +46,7 @@ export class SettingsService {
       hydeEnabled: toBoolean(kv[SETTINGS_KEYS.HYDE_ENABLED]!),
       rerankingEnabled: toBoolean(kv[SETTINGS_KEYS.RERANKING_ENABLED]!),
       topK: parseInt(kv[SETTINGS_KEYS.TOP_K]!),
+      rerankTopK: parseInt(kv[SETTINGS_KEYS.RERANK_TOP_K]!),
       onlineEvaluationEnabled: toBoolean(kv[SETTINGS_KEYS.ONLINE_EVALUATION_ENABLED]!),
       conversationHistoryWindow: parseInt(kv[SETTINGS_KEYS.CONVERSATION_HISTORY_WINDOW]!),
       retrievalMode: (kv[SETTINGS_KEYS.RETRIEVAL_MODE] ?? "dense") as "dense" | "bm25" | "hybrid",
@@ -62,6 +64,7 @@ export class SettingsService {
       hydeEnabled: SETTINGS_KEYS.HYDE_ENABLED,
       rerankingEnabled: SETTINGS_KEYS.RERANKING_ENABLED,
       topK: SETTINGS_KEYS.TOP_K,
+      rerankTopK: SETTINGS_KEYS.RERANK_TOP_K,
       onlineEvaluationEnabled: SETTINGS_KEYS.ONLINE_EVALUATION_ENABLED,
       conversationHistoryWindow: SETTINGS_KEYS.CONVERSATION_HISTORY_WINDOW,
       retrievalMode: SETTINGS_KEYS.RETRIEVAL_MODE,

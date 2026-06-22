@@ -21,8 +21,12 @@ export interface RetrievalOptions {
   topK: number;
   hyde: boolean;
   reranking: boolean;
+  /** Number of chunks to keep after reranking. Only applies when reranking is enabled. */
+  rerankTopK?: number;
   retrievalMode?: "dense" | "bm25" | "hybrid";
   rrfK?: number;
+  /** Minimum similarity score threshold (0–1). Applied to dense and bm25 modes only; hybrid RRF scores are not comparable percentages. */
+  minSimilarityScore?: number;
 }
 
 export interface RetrievalResult {
@@ -83,6 +87,14 @@ export class RetrievalService {
 
     if (options.reranking && chunks.length > 0) {
       chunks = await this.rerank(query, chunks);
+      if (options.rerankTopK != null) {
+        chunks = chunks.slice(0, options.rerankTopK);
+      }
+    }
+
+    // Filter by similarity threshold for dense/bm25 modes (hybrid RRF scores are not percentage-based)
+    if (mode !== "hybrid" && options.minSimilarityScore != null) {
+      chunks = chunks.filter((c) => c.similarityScore > options.minSimilarityScore!);
     }
 
     const retrievalMs = Date.now() - start;

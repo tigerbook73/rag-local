@@ -83,7 +83,9 @@ export class MessagesService {
           topK: settings.topK,
           hyde: settings.hydeEnabled,
           reranking: settings.rerankingEnabled,
+          rerankTopK: settings.rerankTopK,
           retrievalMode: settings.retrievalMode,
+          minSimilarityScore: 0.5,
         },
         llmProvider,
       );

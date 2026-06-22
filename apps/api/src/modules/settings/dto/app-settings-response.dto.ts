@@ -23,6 +23,9 @@ export class AppSettingsResponseDto {
   topK!: number;
 
   @ApiProperty()
+  rerankTopK!: number;
+
+  @ApiProperty()
   onlineEvaluationEnabled!: boolean;
 
   @ApiProperty()
