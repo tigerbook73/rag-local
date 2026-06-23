@@ -27,6 +27,7 @@
     "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.28.0",
     "@types/node": "^22.19.21",
+    "ai-skills": "github:tigerbook73/ai-scaffold",
     "eslint": "^9.28.0",
     "eslint-config-prettier": "^10.1.5",
     "lefthook": "^2.1.9",
