@@ -49,6 +49,11 @@ class RerankRequest(BaseModel):
     passages: list[str]
 
 
+class RerankBatchRequest(BaseModel):
+    queries: list[str]
+    passages: list[list[str]]
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "model": MODEL_NAME, "device": str(next(model.parameters()).device) if model else "not loaded"}
@@ -74,3 +79,16 @@ def rerank(req: RerankRequest):
     pairs = [(req.query, p) for p in req.passages]
     scores: list[float] = reranker.predict(pairs).tolist()
     return {"scores": scores}
+
+
+@app.post("/rerank/batch")
+def rerank_batch(req: RerankBatchRequest):
+    assert reranker is not None
+    counts = [len(p) for p in req.passages]
+    pairs = [(q, p) for q, qp in zip(req.queries, req.passages) for p in qp]
+    flat_scores: list[float] = reranker.predict(pairs, batch_size=128).tolist() if pairs else []
+    result, offset = [], 0
+    for count in counts:
+        result.append(flat_scores[offset : offset + count])
+        offset += count
+    return {"scores": result}
