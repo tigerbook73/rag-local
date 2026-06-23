@@ -152,13 +152,22 @@ function OfflineTab() {
     <div className="space-y-4">
       <div className="rounded-lg border p-3 bg-muted/40">
         <p className="text-xs font-medium mb-2">运行 BEIR 评估命令：</p>
-        <pre className="text-xs overflow-x-auto space-y-1">
-          <code>{`cd scripts/beir-eval
-pip install -r requirements.txt
+        <pre className="text-xs overflow-x-auto">
+          <code>{`cd packages/beir-eval
 
-python beir_eval.py import --dataset scifact
-python beir_eval.py embed  --dataset scifact --config bge-m3-v1
-python beir_eval.py eval   --dataset scifact --config bge-m3-v1 --sample 50`}</code>
+# 1. 导入数据集
+pnpm beir-eval -- import --dataset scifact
+
+# 2. 生成嵌入向量（dense / hybrid 模式需要）
+pnpm beir-eval -- embed --dataset scifact
+
+# 3. 运行评估（选择检索模式）
+pnpm beir-eval -- eval --dataset scifact --retrieval dense
+pnpm beir-eval -- eval --dataset scifact --retrieval bm25
+pnpm beir-eval -- eval --dataset scifact --retrieval hybrid
+
+# 4. 启用 Reranker（可追加到任意检索模式）
+pnpm beir-eval -- eval --dataset scifact --retrieval dense --rerank`}</code>
         </pre>
       </div>
 

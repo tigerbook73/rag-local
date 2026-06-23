@@ -108,6 +108,9 @@ program
   .option("--chunk-overlap <n>", "Chunk overlap in characters", String(DEFAULT_CHUNK_OVERLAP))
   .option("--retrieval <mode>", "Retrieval mode: dense | bm25 | hybrid", "dense")
   .option("--rrf-k <n>", "RRF k parameter for hybrid fusion", "60")
+  .option("--rerank", "Apply cross-encoder reranking after initial retrieval")
+  .option("--rerank-top-n <n>", "Number of candidates to rerank (reduces latency)", "10")
+  .option("--concurrency <n>", "Number of queries processed in parallel", "8")
   .action(
     async (opts: {
       dataset: string;
@@ -117,6 +120,9 @@ program
       chunkOverlap: string;
       retrieval: string;
       rrfK: string;
+      rerank?: boolean;
+      rerankTopN: string;
+      concurrency: string;
     }) => {
       const retrieval = opts.retrieval as RetrievalMode;
       if (!["dense", "bm25", "hybrid"].includes(retrieval)) {
@@ -131,6 +137,9 @@ program
         chunkOverlap: parseInt(opts.chunkOverlap, 10),
         retrieval,
         rrfK: parseInt(opts.rrfK, 10),
+        rerank: opts.rerank ?? false,
+        rerankTopN: parseInt(opts.rerankTopN, 10),
+        concurrency: parseInt(opts.concurrency, 10),
       });
     },
   );

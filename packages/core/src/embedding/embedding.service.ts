@@ -43,4 +43,20 @@ export class EmbeddingService {
     const { scores } = (await res.json()) as { scores: number[] };
     return scores;
   }
+
+  /** Batch cross-encoder reranking — one HTTP call for all queries */
+  async rerankBatch(pairs: { query: string; passages: string[] }[]): Promise<number[][]> {
+    if (!this.baseUrl) throw new Error("EmbeddingService not initialized — call init() first");
+    const res = await fetch(`${this.baseUrl}/rerank/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        queries: pairs.map((p) => p.query),
+        passages: pairs.map((p) => p.passages),
+      }),
+    });
+    if (!res.ok) throw new Error(`Reranking service error: ${res.status} ${res.statusText}`);
+    const { scores } = (await res.json()) as { scores: number[][] };
+    return scores;
+  }
 }
